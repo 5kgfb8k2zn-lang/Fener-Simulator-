@@ -551,6 +551,10 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
         <p class="label">Echte Aufstellung</p>
         <div id="rl-lineup"></div>
       </section>
+      <section class="panel" id="rl-rivals-wrap" hidden>
+        <p class="label">Rivalen (Push bei Endergebnis)</p>
+        <ul class="rl-list" id="rl-rivals"></ul>
+      </section>
       <section class="panel" id="rl-others-wrap" hidden>
         <p class="label">Weitere Spiele live</p>
         <ul class="rl-list" id="rl-others"></ul>
@@ -2414,6 +2418,36 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     return '<li class="' + cls + '"><span class="m">' + min + '</span><span class="ic">' + icon + '</span><span class="tx">' + txt + "</span></li>";
   }
 
+  // Live-Siegchance aus Spielstand, Minute und Stärke (gleiches Modell wie im Helfer)
+  function oppRatingApi(name, league) {
+    if (league === 203) { var t = findTeam(mapLeagueName(name)); return t ? t.r : 70; }
+    var k = norm(name);
+    var cl = CL_LEAGUE.filter(function (c) { return (c.key || []).some(function (x) { return k.indexOf(x) >= 0; }); })[0];
+    if (cl) return cl.r;
+    var eu = EUROPE.filter(function (e) { return k.indexOf(norm(e.n).slice(0, 6)) >= 0; })[0];
+    return eu ? eu.r : 78;
+  }
+  function poisP(k, l) { var p = Math.exp(-l); for (var i = 1; i <= k; i++) p *= l / i; return p; }
+  function liveChance(f) {
+    var st = f.fixture.status.short, el = f.fixture.status.elapsed || 0;
+    if (["1H", "2H", "HT", "LIVE"].indexOf(st) < 0) return null;
+    var fbHome = isFb(f.teams.home.name), opp = fbHome ? f.teams.away.name : f.teams.home.name;
+    var rest = st === "HT" ? 0.5 : Math.max(0.02, (90 - Math.min(el, 90)) / 90);
+    var fbReds = 0, opReds = 0;
+    (f.events || []).forEach(function (e) { if (e.type === "Card" && /Red|Second/.test(e.detail)) { if (isFb(e.team.name)) fbReds++; else opReds++; } });
+    var d = (FB_RATING - oppRatingApi(opp, f.league.id) + (fbHome ? 3 : -3)) / 25;
+    var lf = 1.35 * Math.exp(d) * rest * Math.pow(0.8, fbReds) * Math.pow(1.15, opReds);
+    var lo = 1.35 * Math.exp(-d) * rest * Math.pow(0.8, opReds) * Math.pow(1.15, fbReds);
+    var cf = fbHome ? f.goals.home || 0 : f.goals.away || 0, co = fbHome ? f.goals.away || 0 : f.goals.home || 0;
+    var w = 0, dr = 0, l = 0;
+    for (var i = 0; i <= 10; i++) for (var j = 0; j <= 10; j++) {
+      var p = poisP(i, lf) * poisP(j, lo);
+      if (cf + i > co + j) w += p; else if (cf + i === co + j) dr += p; else l += p;
+    }
+    var t = w + dr + l || 1;
+    return { w: w / t, d: dr / t, l: l / t };
+  }
+
   function matchCard(f, title) {
     var h = f.teams.home.name, a = f.teams.away.name;
     var live = ["NS", "FT", "AET", "PEN", "PST", "CANC", "TBD"].indexOf(f.fixture.status.short) < 0;
@@ -2423,6 +2457,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     return '<div class="board rl-match">' +
       '<div class="rl-meta"><span>' + (live ? '<span class="live-dot"></span>' : "") + esc(title) + " · " + esc(LEAGUES[f.league.id] || f.league.name) + '</span><span class="' + (live ? "min" : "") + '">' + (live ? minuteText(f) : f.fixture.status.short === "NS" ? when + " · " + minuteText(f) : when + " · Ende") + "</span></div>" +
       '<div class="rl-row"><span class="h' + (isFb(h) ? " fb" : "") + '">' + esc(h) + '</span><span class="sc">' + gh + ":" + ga + '</span><span class="a' + (isFb(a) ? " fb" : "") + '">' + esc(a) + "</span></div>" +
+      ((isFb(h) || isFb(a)) && liveChance(f) ? (function (c) { return '<div class="probs"><div class="probbar"><i class="w" style="width:' + c.w * 100 + '%"></i><i class="d" style="width:' + c.d * 100 + '%"></i><i class="l" style="width:' + c.l * 100 + '%"></i></div><div class="problbl"><span>Siegchance jetzt <b>' + pct(c.w) + '</b></span><span>Remis <b>' + pct(c.d) + '</b></span><span>Niederlage <b>' + pct(c.l) + "</b></span></div></div>"; })(liveChance(f)) : "") +
       (evs ? '<ul class="ticker">' + evs + "</ul>" : live ? '<p class="hint">Noch keine Ereignisse.</p>' : "") +
       seasonSyncButton(f) +
       "</div>";
@@ -2559,7 +2594,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     $("rl-others-on").checked = !!prefs.rlOthers;
     $("use-bar").style.width = Math.min(100, used / DAILY_LIMIT * 100) + "%";
     $("use-txt").textContent = RL.helper ? "Helfer: " + used + " von " + DAILY_LIMIT + " heute verbraucht · die App selbst verbraucht nichts" : used + " von " + DAILY_LIMIT + " heute verbraucht";
-    if (RL.helper) $("use-est").textContent = "Der Helfer fragt am Spieltag etwa jede Minute ab und schickt dir Push-Nachrichten bei Anpfiff, Toren, Roten Karten, Halbzeit und Abpfiff. Die App liest seinen Stand alle 30 Sekunden, solange sie offen ist.";
+    if (RL.helper) $("use-est").textContent = "Der Helfer fragt am Spieltag etwa jede Minute ab und schickt dir Push-Nachrichten: morgens eine Erinnerung mit Prognose, dann Anpfiff, Tore und Rote Karten mit Live-Siegchance, Halbzeit und Abpfiff. Dazu die Endergebnisse von Galatasaray, Beşiktaş und Trabzonspor mit dem Abstand zu Fener. Die App liest seinen Stand alle 30 Sekunden, solange sie offen ist.";
     else $("use-est").textContent = (prefs.rlInt === "max"
       ? "Nutzt am Spieltag das ganze Tageslimit, verteilt auf die Spielzeit: etwa alle 70 Sekunden, Tore erscheinen im Schnitt ca. 1 Minute später. "
       : { spar: "Alle 3 Minuten, Tore im Schnitt ca. 2 Minuten später. ", normal: "Alle 2 Minuten, Tore im Schnitt ca. 1,5 Minuten später. " }[prefs.rlInt] + "Pro Fener-Spiel höchstens ca. " + est + " Anfragen. ") +
@@ -2621,6 +2656,13 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     $("rl-fb").innerHTML = fbHtml;
     renderLineup();
 
+    var rivals = RL.helper && RL.helperState && RL.helperState.rivals || [];
+    var rivalRows = rivals.filter(function (r) { return Math.abs(Date.parse(r.date) - Date.now()) < 3 * 86400000; }).map(function (r) {
+      var t = new Date(r.date), fin = FINISHED.indexOf(r.st) >= 0;
+      return '<li><span class="mn" style="color:var(--muted)">' + (fin ? "Ende" : t.toLocaleDateString("de-DE", { weekday: "short" }) + " " + t.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })) + '</span><span class="t1">' + esc(r.h) + '</span><span class="s">' + (r.gh === null ? "–" : r.gh) + ":" + (r.ga === null ? "–" : r.ga) + '</span><span class="t2">' + esc(r.a) + "</span></li>";
+    });
+    $("rl-rivals-wrap").hidden = !rivalRows.length;
+    $("rl-rivals").innerHTML = rivalRows.join("");
     $("rl-others-wrap").hidden = !RL.others.length;
     $("rl-others").innerHTML = RL.others.map(function (f) {
       return '<li><span class="mn">' + minuteText(f) + '</span><span class="t1">' + esc(f.teams.home.name) + '</span><span class="s">' + (f.goals.home === null ? "–" : f.goals.home) + ":" + (f.goals.away === null ? "–" : f.goals.away) + '</span><span class="t2">' + esc(f.teams.away.name) + "</span></li>";
