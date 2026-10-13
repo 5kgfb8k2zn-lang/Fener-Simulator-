@@ -372,11 +372,10 @@ main { padding: 12px 12px 28px; }
 
 /* Kopfleiste */
 .appbar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: rgba(7,11,22,.86); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-bottom: 1px solid var(--navy-3); }
-.appbar svg { width: 34px; height: 34px; flex: none; }
+.appbar .cr { width: 34px; height: 34px; }
 .appbar div { min-width: 0; display: flex; flex-direction: column; }
 .appbar b { font-size: 19px; font-weight: 700; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .appbar small { color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#v-season .brand, #v-setup .brand { display: none; }
 
 /* Vereinswappen */
 .cr { --a: #333; --b: #fff; width: 24px; height: 24px; flex: none; border-radius: 50%; background: var(--a); box-shadow: inset 0 0 0 2px var(--b), 0 0 0 1px rgba(255,255,255,.08); color: var(--b); display: inline-grid; place-items: center; font-family: var(--font-display); font-weight: 800; font-size: 9px; letter-spacing: .02em; line-height: 1; overflow: hidden; }
@@ -435,9 +434,12 @@ main { padding: 12px 12px 28px; }
 .pitch .box.top { top: 4%; border-top: 0; } .pitch .box.bot { bottom: 4%; border-bottom: 0; }
 .pp { position: absolute; z-index: 1; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 3px; width: 22%; }
 .pp .sh { position: relative; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-family: var(--font-display); font-weight: 800; font-size: 16px; color: var(--navy); background: linear-gradient(90deg, var(--yellow) 0 50%, #1d3f96 50% 100%); box-shadow: 0 2px 6px rgba(0,0,0,.4); }
-.pp .sh span { background: rgba(255,255,255,.92); border-radius: 50%; width: 24px; height: 24px; display: grid; place-items: center; font-size: 14px; }
+.pp .sh > span { background: rgba(255,255,255,.92); border-radius: 50%; width: 24px; height: 24px; display: grid; place-items: center; font-size: 14px; }
 .pp.gk .sh { background: #2fbf8f; }
 .pp .rb { position: absolute; top: -6px; right: -16px; font-family: var(--font-body); font-size: 10.5px; font-weight: 800; color: #fff; padding: 1px 5px; border-radius: 6px; font-variant-numeric: tabular-nums; }
+.pp.gone .sh { background: #4a5268; box-shadow: none; }
+.pp.gone .sh > span, .pp.gone .nm, .pp.gone .rb { opacity: .5; }
+.pp.gone .ev .rc { width: 10px; height: 14px; background: var(--card-r); box-shadow: 0 0 0 1px rgba(0,0,0,.6); }
 .pp .nm { font-size: 11px; font-weight: 600; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .pp .ev { position: absolute; bottom: -4px; left: -10px; display: flex; gap: 2px; }
 .pp .ev .ball { width: 12px; height: 12px; background: #fff; }
@@ -517,25 +519,13 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
 
 <div class="app">
   <header class="appbar">
-    <svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="19" fill="#ffd31a"/><circle cx="20" cy="20" r="15.5" fill="#0b1838"/><path d="M20 4.5 A15.5 15.5 0 0 1 20 35.5 Z" fill="#ffd31a" opacity=".9"/><path d="M14 13h9v3h-6v3h5v3h-5v6h-3z" fill="#fff"/></svg>
+    <span id="ab-crest"></span>
     <div><b id="ab-title">Saison 2026/27</b><small id="ab-sub">Fenerbahçe</small></div>
   </header>
   <main id="main">
 
     <!-- EINZELSPIEL: SETUP -->
     <div class="view" id="v-setup" hidden>
-      <header class="brand">
-        <svg class="crest" viewBox="0 0 40 40" aria-hidden="true">
-          <circle cx="20" cy="20" r="19" fill="#ffd31a"/>
-          <circle cx="20" cy="20" r="15.5" fill="#0b1838"/>
-          <path d="M20 4.5 A15.5 15.5 0 0 1 20 35.5 Z" fill="#ffd31a" opacity=".9"/>
-          <path d="M14 13h9v3h-6v3h5v3h-5v6h-3z" fill="#fff"/>
-        </svg>
-        <div>
-          <h1>Fener <span>Simulator</span></h1>
-          <p>Freundschaftsspiel gegen jeden Gegner</p>
-        </div>
-      </header>
 
       <section>
         <p class="label">Spielort</p>
@@ -665,18 +655,6 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
     <!-- SAISON -->
     <div class="view" id="v-season">
       <header class="season-head">
-        <div class="brand">
-          <svg class="crest" viewBox="0 0 40 40" aria-hidden="true">
-            <circle cx="20" cy="20" r="19" fill="#ffd31a"/>
-            <circle cx="20" cy="20" r="15.5" fill="#0b1838"/>
-            <path d="M20 4.5 A15.5 15.5 0 0 1 20 35.5 Z" fill="#ffd31a" opacity=".9"/>
-            <path d="M14 13h9v3h-6v3h5v3h-5v6h-3z" fill="#fff"/>
-          </svg>
-          <div>
-            <h1>Saison <span>2026/27</span></h1>
-            <p id="season-sub">Start beim echten Stand</p>
-          </div>
-        </div>
         <div class="seg" id="season-mode">
           <button type="button" data-m="current" aria-pressed="true">Aktueller Stand</button>
           <button type="button" data-m="start" aria-pressed="false">Ab 1. Spieltag</button>
@@ -874,7 +852,7 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
   // DATEN – eingebauter Stand 13.10.2026 (nach dem 7. Spieltag)
   // Mit Hintergrund-Helfer wird das automatisch durch den echten Stand ersetzt.
   // =====================================================================
-  var APP_VERSION = "23 (14.10.2026)";
+  var APP_VERSION = "24 (14.10.2026)";
   var FB_NAME = "Fenerbahçe";
   var FB_RATING = 84;
   var FB_STADIUM = "Chobani Stadyumu";
@@ -1119,7 +1097,7 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
     var h = 0; for (var i = 0; i < n.length; i++) h = (h * 31 + n.charCodeAt(i)) % 360;
     var w = n.replace(/[^A-Za-zÀ-žİıŞşĞğÇçÖöÜü\s]/g, "").trim().split(/\s+/);
     var ab = w.length > 1 ? w.map(function (x) { return x.charAt(0); }).join("").slice(0, 3) : n.slice(0, 3);
-    return ["hsl(" + h + ", 55%, 34%)", "#ffffff", ab.toLocaleUpperCase("tr-TR")];
+    return ["hsl(" + h + ", 55%, 34%)", "#ffffff", /[ıİşŞğĞçÇöÖüÜ]/.test(n) ? ab.toLocaleUpperCase("tr-TR") : ab.toUpperCase()];
   }
   function crest(n, size) {
     var cls = "cr" + (size ? " " + size : "");
@@ -1128,7 +1106,7 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
     return '<span class="' + cls + '" style="--a:' + c[0] + ";--b:" + c[1] + '" aria-hidden="true">' + esc(c[2]) + "</span>";
   }
   function ratingCls(r) { return r >= 8.5 ? "rt-hi" : r >= 7 ? "rt-good" : r >= 6 ? "rt-mid" : "rt-low"; }
-  var TAB_TITLES = { season: "Saison 2026/27", play: "Freundschaftsspiel", real: "Live und echte Daten", squad: "Kader", history: "Verlauf" };
+  var TAB_TITLES = { play: "Freundschaftsspiel", real: "Live und echte Daten", squad: "Kader", history: "Verlauf" };
   function fmtDate(iso) { var p = iso.split("-"); return p[2] + "." + p[1] + "."; }
   function fmtDateLong(iso) {
     var d = new Date(iso + "T12:00:00");
@@ -1421,8 +1399,8 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
     if (tab === "play") refreshSetup();
     if (tab === "season" && liveFor !== "season") renderSeason();
     var inLive = liveFor === tab;
-    $("ab-title").textContent = inLive ? (M.fbHome ? FB_NAME + " – " + M.opp.n : M.opp.n + " – " + FB_NAME) : TAB_TITLES[tab];
-    $("ab-sub").textContent = inLive ? M.comp + (M.derby ? " · Derby" : "") : tab === "season" ? $("season-sub").textContent : "Fenerbahçe";
+    $("ab-title").textContent = inLive ? (M.fbHome ? FB_NAME + " – " + M.opp.n : M.opp.n + " – " + FB_NAME) : tab === "season" ? seasonTitle() : TAB_TITLES[tab];
+    $("ab-sub").textContent = inLive ? M.comp + (M.derby ? " · Derby" : "") : tab === "season" ? seasonSubText() : "Fenerbahçe";
     $("main").scrollTop = 0;
   }
 
@@ -1972,13 +1950,20 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
   }
 
   // Aufstellung auf dem Platz mit Live-Noten
-  var PITCH_ROW = { TW: 90, RV: 73, IV: 73, LV: 73, ZDM: 56, ZM: 50, RA: 32, ZOM: 32, LA: 32, ST: 13 };
+  var PITCH_ROW = { TW: 90, RV: 74, IV: 74, LV: 74, ZDM: 59, ZM: 46, RA: 31, ZOM: 31, LA: 31, ST: 13 };
   var PITCH_SIDE = { LV: 0, LA: 0, RV: 2, RA: 2 };
   function renderPitch() {
     var el = $("pitch"); if (!el) return;
-    var on = fbPlayers(), goals = {}, rows = {};
+    // Vom Platz gestellte Spieler bleiben sichtbar (ausgegraut mit Roter Karte)
+    var red = {};
+    M.cardLog.forEach(function (c) { if (c.t === "r" || c.t === "yr") red[c.n] = true; });
+    var on = M.onPitch.filter(function (p) { return !p.off || red[p.n]; }), goals = {}, rows = {};
     M.fb.log.forEach(function (g) { goals[g.n] = (goals[g.n] || 0) + 1; });
-    on.forEach(function (p) { var y = PITCH_ROW[p.pos] || 50; (rows[y] = rows[y] || []).push(p); });
+    var best = M.onPitch.slice().sort(function (a, b) { return b.rating - a.rating; })[0];
+    var sig = on.map(function (p) { return p.n + p.rating.toFixed(1) + (p.booked ? "y" : "") + (red[p.n] ? "r" : "") + (goals[p.n] || 0); }).join("|") + (M.done ? "E" : "") + (M.minute > 10 ? "m" : "");
+    if (el._sig === sig) return;
+    el._sig = sig;
+    on.forEach(function (p) { var y = PITCH_ROW[p.pos] || PITCH_ROW.ZM; (rows[y] = rows[y] || []).push(p); });
     var html = '<div class="box top"></div><div class="box bot"></div>';
     Object.keys(rows).forEach(function (y) {
       var side = function (p) { return PITCH_SIDE[p.pos] === undefined ? 1 : PITCH_SIDE[p.pos]; };
@@ -1987,12 +1972,11 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
         var x = (i + 1) / (list.length + 1) * 100, r = Math.max(3, Math.min(10, p.rating));
         var ev = "";
         for (var g = 0; g < (goals[p.n] || 0); g++) ev += '<span class="ball"></span>';
-        if (p.booked) ev += '<span class="yc"></span>';
-        html += '<div class="pp' + (p.pos === "TW" ? " gk" : "") + '" style="left:' + x + "%;top:" + y + '%"><div class="sh"><span>' + p.no + '</span><i class="rb ' + ratingCls(r) + '">' + r.toFixed(1) + "</i>" + (ev ? '<div class="ev">' + ev + "</div>" : "") + '</div><span class="nm">' + esc(lastName(p.n)) + "</span></div>";
+        if (red[p.n]) ev += '<span class="rc"></span>'; else if (p.booked) ev += '<span class="yc"></span>';
+        html += '<div class="pp' + (p.pos === "TW" ? " gk" : "") + (red[p.n] ? " gone" : "") + '" style="left:' + x + "%;top:" + y + '%"><div class="sh"><span>' + p.no + '</span><i class="rb ' + ratingCls(r) + '">' + r.toFixed(1) + "</i>" + (ev ? '<div class="ev">' + ev + "</div>" : "") + '</div><span class="nm">' + esc(lastName(p.n)) + "</span></div>";
       });
     });
     el.innerHTML = html;
-    var best = on.slice().sort(function (a, b) { return b.rating - a.rating; })[0];
     $("motm-live").innerHTML = best && M.minute > 10 ? '<div class="motm-row">' + crest(FB_NAME) + "<b>" + (M.done ? "Spieler des Spiels: " : "Bester bisher: ") + esc(best.n) + '</b><span class="rb ' + ratingCls(best.rating) + '">' + Math.min(10, best.rating).toFixed(1) + "</span></div>" : "";
   }
 
@@ -2004,6 +1988,7 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
     M = newMatch(cfg);
     liveActive = true;
     $("ticker").innerHTML = "";
+    $("pitch")._sig = null;
     $("result").hidden = true;
     $("live-controls").hidden = false;
     $("pens").hidden = true;
@@ -2680,6 +2665,12 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
   });
 
   // ---------- Saison-Ansicht ----------
+  function seasonTitle() { return (S.no || 1) > 1 ? seasonLabel() + " · 2026/27" : "Saison 2026/27"; }
+  function seasonSubText() {
+    var simulated = S.fixtures.filter(function (f) { return f.done && !f.real; }).length, isStart = S.mode === "start";
+    var stand = S.realAt ? "echtem Stand vom " + new Date(S.realAt).toLocaleDateString("de-DE") : "echtem Stand vom 13.10.2026";
+    return (isStart ? "Ab 1. Spieltag · " : "Aktueller Stand · ") + (simulated ? simulated + (simulated === 1 ? " Spiel" : " Spiele") + " simuliert" : isStart ? "alle Teams bei 0 Punkten" : "Start bei " + stand);
+  }
   var editId = null;
   function renderSeason() {
     var pos = fbPos(), me = S.table[FB_NAME];
@@ -2691,10 +2682,8 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
 
     var nx = nextFixture();
     var simulated = S.fixtures.filter(function (f) { return f.done && !f.real; }).length;
-    var stand = S.realAt ? "echtem Stand vom " + new Date(S.realAt).toLocaleDateString("de-DE") : "echtem Stand vom 13.10.2026";
     var isStart = S.mode === "start";
-    $("season-sub").textContent = (isStart ? "Ab 1. Spieltag · " : "Aktueller Stand · ") + (simulated ? simulated + (simulated === 1 ? " Spiel" : " Spiele") + " simuliert" : isStart ? "alle Teams bei 0 Punkten" : "Start bei " + stand);
-    if (currentTab === "season" && !(liveActive && M && M.season)) $("ab-sub").textContent = $("season-sub").textContent;
+    if (currentTab === "season" && !(liveActive && M && M.season)) { $("ab-title").textContent = seasonTitle(); $("ab-sub").textContent = seasonSubText(); }
     setSeg("season-mode", "m", S.mode || "current");
     $("mode-confirm").hidden = !pendingMode;
     if (pendingMode) $("mode-confirm-txt").textContent = "Saison " + (pendingMode === "start" ? "ab dem 1. Spieltag" : "beim aktuellen echten Stand") + " neu starten? " + (simulated === 1 ? "Dein simuliertes Spiel geht" : "Deine " + simulated + " simulierten Spiele gehen") + " verloren.";
@@ -2780,7 +2769,7 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
 
   function renderFixtures(nx) {
     var lastMon = "";
-    $("fixtures").innerHTML = S.fixtures.slice().sort(function (a, b) { return a.d < b.d ? -1 : a.d > b.d ? 1 : 0; }).map(function (f) {
+    $("fixtures").innerHTML = S.fixtures.map(function (f) {
       var right = f.done
         ? '<span class="rs ' + resultClass(f) + '"><i class="' + resultClass(f) + '"></i>' + fxScore(f) + "</span>"
         : '<span class="open">' + (f.v === "H" ? "Heim" : f.v === "A" ? "Ausw." : "Neutral") + "</span>";
@@ -3381,6 +3370,7 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
   FORM = S.form || computeForm(TABLE_START.map(function (t) { return { n: t.n, p: t.p, gd: t.gf !== null ? t.gf - t.ga : t.gd }; }));
   if (!S.form) { S.form = FORM; saveSeason(); }
   renderSoundBtn();
+  $("ab-crest").outerHTML = crest(FB_NAME);
   renderVoice();
   refreshSetup();
   showTab("season");
