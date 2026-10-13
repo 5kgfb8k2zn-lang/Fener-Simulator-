@@ -315,6 +315,19 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
 .str b { font-family: var(--font-display); font-weight: 800; font-size: 34px; color: var(--yellow); font-variant-numeric: tabular-nums; line-height: 1; }
 .pl { grid-template-columns: 2.6ch 3.4ch 1fr 2.6ch 40px; }
 .pl .rt { font-family: var(--font-display); font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
+.prefs { display: flex; flex-direction: column; }
+.prefs label { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--navy-3); font-size: 14.5px; cursor: pointer; }
+.prefs label:last-child { border-bottom: 0; }
+.prefs input { width: 20px; height: 20px; accent-color: var(--yellow); flex: none; }
+.chart { width: 100%; height: auto; display: block; }
+.chart-wrap { border-top: 1px solid var(--navy-3); padding-top: 10px; }
+.chart-legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); margin-top: 4px; flex-wrap: wrap; }
+.chart-legend i { display: inline-block; width: 12px; height: 3px; border-radius: 2px; vertical-align: 3px; margin-right: 5px; }
+.sel { width: 100%; background: var(--navy-3); border: 1px solid var(--line); border-radius: 10px; padding: 11px 10px; color: var(--fg); font: inherit; font-size: 16px; }
+.pl-st { grid-column: 3 / -1; font-size: 12.5px; color: var(--muted); margin-top: -2px; }
+.pl-st.out { color: var(--loss); }
+.pl.is-out input { opacity: .55; text-decoration: line-through; }
+.next .note.miss { color: var(--loss); }
 .pl .sw { background: var(--navy-2); border: 1px solid var(--line); border-radius: 9px; height: 38px; cursor: pointer; font-weight: 800; }
 .pl.sel .sw { background: var(--yellow); color: var(--navy); border-color: var(--yellow); }
 .pl.sel input { border-color: var(--yellow); }
@@ -429,6 +442,25 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
         <button class="ghost" type="button" id="skip">Zum Ende</button>
         <button class="ghost" type="button" id="sound" aria-pressed="true">Ton an</button>
       </div>
+
+      <section class="panel" id="coach">
+        <p class="label">Trainer · du entscheidest</p>
+        <div class="seg" id="live-tac">
+          <button type="button" data-t="def" aria-pressed="false">Defensiv</button>
+          <button type="button" data-t="bal" aria-pressed="true">Ausgewogen</button>
+          <button type="button" data-t="off" aria-pressed="false">Offensiv</button>
+        </div>
+        <button class="ghost" type="button" id="sub-open" style="margin-top:10px">Spieler wechseln</button>
+        <div id="sub-panel" hidden style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+          <p class="hint" style="margin:0">Das Spiel ist pausiert, solange du wechselst.</p>
+          <label class="hint" for="sub-off">Raus</label>
+          <select id="sub-off" class="sel"></select>
+          <label class="hint" for="sub-on">Rein</label>
+          <select id="sub-on" class="sel"></select>
+          <label class="toggle" for="sub-auto"><input type="checkbox" id="sub-auto"><span>Restliche Wechsel automatisch<small>Aus: Nur du wechselst. Verletzte werden trotzdem ersetzt.</small></span></label>
+          <div class="btn-row" style="margin:0"><button class="ghost" type="button" id="sub-cancel">Schließen</button><button class="cta" type="button" id="sub-do" style="font-size:18px;padding:10px">Einwechseln</button></div>
+        </div>
+      </section>
 
       <div class="panel result" id="result" hidden>
         <div class="verdict" id="verdict"></div>
@@ -614,6 +646,10 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
           <button class="ghost" type="button" id="rl-helper-save">Speichern</button>
         </div>
         <button class="ghost" type="button" id="rl-helper-test" style="margin-top:8px">Test-Nachricht senden</button>
+        <div id="push-prefs-wrap" hidden style="margin-top:12px">
+          <p class="label">Welche Nachrichten willst du?</p>
+          <div id="push-prefs" class="prefs"></div>
+        </div>
         <p class="hint" style="margin-top:8px" id="rl-helper-msg">Ist der Helfer eingetragen, holt die App alles von ihm und verbraucht selbst keine Anfragen mehr. Leer lassen, um ohne Helfer zu arbeiten.</p>
       </section>
     </div>
@@ -637,7 +673,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
 
       <header>
         <p class="label">Startelf</p>
-        <p class="hint">Stand 13.10.2026. Zum Tauschen erst ⇄ bei einem Startelf-Spieler, dann bei einem Bankspieler tippen. Namen lassen sich direkt ändern. Die Zahl rechts ist die Spielerstärke.</p>
+        <p class="hint">Stand 13.10.2026. Zum Tauschen erst ⇄ bei einem Startelf-Spieler, dann bei einem Bankspieler tippen. Namen lassen sich direkt ändern. Die Zahl rechts ist die Spielerstärke. Verletzte und gesperrte Spieler ersetzt die Saison automatisch durch den besten Bankspieler auf derselben Position.</p>
       </header>
       <div class="squad" id="xi"></div>
       <p class="label" style="margin-top:6px">Bank</p>
@@ -909,8 +945,8 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
 
   // Teamstärke aus der Startelf
   var DEF_AVG = DEFAULT_SQUAD.xi.reduce(function (s, p) { return s + p.r; }, 0) / 11;
-  function teamStrength() {
-    var xi = squad.xi;
+  function teamStrength(xiArg) {
+    var xi = xiArg || squad.xi;
     var avg = xi.reduce(function (s, p) { return s + (p.r || 76); }, 0) / xi.length;
     var s = FB_RATING + (avg - DEF_AVG) * 1.2;
     if (!xi.some(function (p) { return p.pos === "TW"; })) s -= 8;
@@ -965,7 +1001,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
   // =====================================================================
   function renderOpps(el, list) {
     el.innerHTML = list.map(function (o) {
-      return '<button type="button" class="opp' + (o.rival ? " rival" : "") + '" data-opp="' + esc(o.n) + '" aria-pressed="' + (prefs.opp === o.n) + '"><b>' + esc(o.n) + "</b><small>" + o.r + "</small></button>";
+      return '<button type="button" class="opp' + (o.rival ? " rival" : "") + '" data-opp="' + esc(o.n) + '" aria-pressed="' + (prefs.opp === o.n) + '"><b>' + esc(o.n) + "</b><small>" + Math.round(teamRating(o.n)) + "</small></button>";
     }).join("");
   }
   function refreshSetup() {
@@ -1029,14 +1065,18 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     function rows(list, key) {
       return list.map(function (p, i) {
         var sel = swapSel && swapSel.k === key && swapSel.i === i;
-        return '<div class="pl' + (sel ? " sel" : "") + '"><span class="no">' + p.no + '</span><span class="pos">' + p.pos + '</span><input id="pl-' + key + "-" + i + '" data-k="' + key + '" data-i="' + i + '" value="' + esc(p.n) + '" aria-label="' + p.pos + " Nummer " + p.no + '" autocomplete="off" autocorrect="off" spellcheck="false"><span class="rt">' + (p.r || "") + '</span><button type="button" class="sw" data-swk="' + key + '" data-swi="' + i + '" aria-label="' + esc(p.n) + ' tauschen">⇄</button></div>';
+        var nx = S && nextFixture(), why = nx ? outReason(p.n, nx.comp) : (S && outReason(p.n, null));
+        var y = S && S.avail && S.avail[p.n] ? S.avail[p.n].y : null;
+        var yTxt = y && (y.SL || y.CL) ? "Gelb: " + (y.SL ? y.SL + " Liga" : "") + (y.SL && y.CL ? ", " : "") + (y.CL ? y.CL + " CL" : "") : "";
+        var status = why || yTxt ? '<span class="pl-st' + (why ? " out" : "") + '">' + esc(why ? (why.indexOf("verletzt") === 0 ? "🚑 " : "🟥 ") + why : "🟨 " + yTxt) + "</span>" : "";
+        return '<div class="pl' + (sel ? " sel" : "") + (why ? " is-out" : "") + '"><span class="no">' + p.no + '</span><span class="pos">' + p.pos + '</span><input id="pl-' + key + "-" + i + '" data-k="' + key + '" data-i="' + i + '" value="' + esc(p.n) + '" aria-label="' + p.pos + " Nummer " + p.no + '" autocomplete="off" autocorrect="off" spellcheck="false"><span class="rt">' + (p.r || "") + '</span><button type="button" class="sw" data-swk="' + key + '" data-swi="' + i + '" aria-label="' + esc(p.n) + ' tauschen">⇄</button>' + status + "</div>";
       }).join("");
     }
     $("xi").innerHTML = rows(squad.xi, "xi");
     $("bench").innerHTML = rows(squad.bench, "bench");
     var s = teamStrength();
-    $("str").textContent = s.toFixed(1);
-    $("str-note").textContent = squad.xi.some(function (p) { return p.pos === "TW"; }) ? "aus der Startelf berechnet" : "Achtung: kein Torwart in der Startelf (−8)";
+    $("str").textContent = (s + (FORM[FB_NAME] || 0)).toFixed(1);
+    $("str-note").textContent = (squad.xi.some(function (p) { return p.pos === "TW"; }) ? "aus der Startelf" : "Achtung: kein Torwart in der Startelf (−8)") + " · Form " + formText(FB_NAME) + " (aus der echten Tordifferenz)";
     setSeg("tactic", "t", prefs.tactic);
     $("tactic-note").textContent = tactic().note;
   }
@@ -1107,11 +1147,12 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
       cfg: cfg, live: !!cfg.live, season: cfg.season || null, opp: cfg.opp,
       fbHome: cfg.venue !== "away", neutral: cfg.venue === "neutral",
       ko: cfg.ko, agg: cfg.agg || null, comp: cfg.comp, derby: !!cfg.opp.rival,
-      tac: tactic(),
+      tac: tactic(), tacKey: prefs.tactic || "bal",
       fb: { r: cfg.fbRating + (cfg.venue === "home" ? homeAdv : 0), g: 0, shots: 0, sot: 0, xg: 0, corners: 0, fouls: 0, y: 0, red: 0, poss: 0, scorers: [], log: [] },
       op: { r: cfg.opp.r + (cfg.venue === "away" ? homeAdv : 0), g: 0, shots: 0, sot: 0, xg: 0, corners: 0, fouls: 0, y: 0, red: 0, poss: 0, scorers: [] },
-      onPitch: squad.xi.map(function (p) { return { no: p.no, pos: p.pos, n: p.n, r: p.r || 76, rating: 6.3 + rnd() * 0.4, booked: false, off: false }; }),
-      bench: squad.bench.map(function (p) { return { no: p.no, pos: p.pos, n: p.n, r: p.r || 76, rating: 6.4, booked: false, off: false }; }),
+      onPitch: (cfg.xi || squad.xi).map(function (p) { return { no: p.no, pos: p.pos, n: p.n, r: p.r || 76, rating: 6.3 + rnd() * 0.4, booked: false, off: false }; }),
+      bench: (cfg.bench || squad.bench).map(function (p) { return { no: p.no, pos: p.pos, n: p.n, r: p.r || 76, rating: 6.4, booked: false, off: false }; }),
+      cardLog: [], injLog: [], autoSub: true,
       subs: 0, minute: 0, half: 1,
       added1: 1 + Math.floor(rnd() * 4), added2: 2 + Math.floor(rnd() * 5),
       momentum: 0, done: false, pens: null, conf: round,
@@ -1185,7 +1226,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
 
     var fbE = eff("fb"), opE = eff("op");
     var d = (fbE - opE) / 10;
-    var pFb = Math.max(0.28, Math.min(0.72, 0.5 + d * 0.09 + M.momentum * 0.06));
+    var pFb = Math.max(0.3, Math.min(0.7, 0.5 + d * 0.075 + M.momentum * 0.06));
     var fbHasBall = rnd() < pFb;
     M[fbHasBall ? "fb" : "op"].poss++;
     M.momentum = Math.max(-1, Math.min(1, M.momentum * 0.9 + (fbHasBall ? 0.05 : -0.05) + (rnd() - 0.5) * 0.1));
@@ -1198,13 +1239,14 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     }
     var shotP = (0.24 + urgency) * (fbHasBall ? M.tac.fb : M.tac.op);
     if (rnd() < shotP) shot(fbHasBall ? "fb" : "op", d);
-    else if (rnd() < 0.09) M[fbHasBall ? "fb" : "op"].corners++;
+    else if (rnd() < 0.135) M[fbHasBall ? "fb" : "op"].corners++;
 
-    if (rnd() < 0.032 * (M.derby ? 1.5 : 1)) card(rnd() < 0.5 ? "fb" : "op");
+    // Fouls (ca. 13 pro Team): meistens foult die Mannschaft ohne Ball
+    if (rnd() < 0.27 * (M.derby ? 1.15 : 1)) foul(rnd() < 0.8 ? (fbHasBall ? "op" : "fb") : (fbHasBall ? "fb" : "op"));
     if (M.derby && rnd() < 0.012) addEvent(minLabel(), IC.dot, pick(DERBY_FLAVOR));
     if (rnd() < 0.0025) injury();
 
-    if (M.half === 2 && M.subs < 5 && (m === 61 || m === 68 || m === 76 || m === 83) && rnd() < 0.8) sub(null);
+    if (M.autoSub && M.half === 2 && M.subs < 5 && (m === 61 || m === 68 || m === 76 || m === 83) && rnd() < 0.8) sub(null);
 
     confStep();
     render();
@@ -1240,7 +1282,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     t.xg += xg;
     var finish = 1 + strength * 0.12;
     var goal = rnd() < xg * finish;
-    var onTarget = goal || rnd() < (big ? 0.6 : 0.3);
+    var onTarget = goal || rnd() < (big ? 0.55 : 0.22);
     if (onTarget) t.sot++;
 
     if (side === "fb") {
@@ -1280,23 +1322,30 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     }
   }
 
+  function foul(side) {
+    M[side].fouls++;
+    if (rnd() < 0.175 * (M.derby ? 1.25 : 1) * (M.minute > 75 ? 1.2 : 1)) card(side);
+  }
   function card(side) {
     var t = M[side];
-    t.fouls++;
-    if (rnd() > 0.55) return;
     if (side === "fb") {
       var cands = fbPlayers().filter(function (p) { return p.pos !== "TW"; });
-      var p = weighted(cands, function (p) { return /ZDM|IV|RV|LV/.test(p.pos) ? 2 : 1; });
-      if (p.booked || rnd() < 0.03) {
+      if (!cands.length) return;
+      var p = weighted(cands, function (p) { return (/ZDM|IV|RV|LV/.test(p.pos) ? 2 : 1) * (p.booked ? 0.45 : 1); }); // Verwarnte spielen vorsichtiger
+      if (p.booked || rnd() < 0.018) {
+        var second = p.booked;
         p.off = true; t.red++; p.rating -= 1.5;
-        addEvent(minLabel(), IC.r, (p.booked ? "Gelb-Rot" : "Rot") + " für <b>" + esc(p.n) + "</b>. Fenerbahçe nur noch zu zehnt.", "big");
+        M.cardLog.push({ n: p.n, t: second ? "yr" : "r" });
+        addEvent(minLabel(), IC.r, (second ? "Gelb-Rot" : "Rot") + " für <b>" + esc(p.n) + "</b>. Fenerbahçe nur noch zu zehnt.", "big");
       } else {
         p.booked = true; t.y++; p.rating -= 0.2;
+        M.cardLog.push({ n: p.n, t: "y" });
         addEvent(minLabel(), IC.y, "Gelbe Karte für " + esc(lastName(p.n)) + ".");
       }
     } else {
-      if (rnd() < 0.04) { t.red++; addEvent(minLabel(), IC.r, "Rot für <b>" + esc(M.opp.n) + "</b>! Überzahl für Fenerbahçe.", "big"); }
-      else { t.y++; addEvent(minLabel(), IC.y, "Gelbe Karte für " + esc(M.opp.n) + " (#" + pick([4, 5, 6, 8, 14, 22, 25]) + ")."); }
+      var no = pick([4, 5, 6, 8, 14, 22, 25, 3, 18]);
+      if (rnd() < 0.018 || rnd() < t.y * 0.022) { t.red++; addEvent(minLabel(), IC.r, (rnd() < 0.5 ? "Gelb-Rot" : "Rot") + " für <b>" + esc(M.opp.n) + "</b> (#" + no + ")! Überzahl für Fenerbahçe.", "big"); }
+      else { t.y++; addEvent(minLabel(), IC.y, "Gelbe Karte für " + esc(M.opp.n) + " (#" + no + ")."); }
     }
   }
 
@@ -1304,6 +1353,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     var cands = fbPlayers().filter(function (p) { return p.pos !== "TW"; });
     if (!cands.length) return;
     var p = pick(cands);
+    M.injLog.push(p.n);
     addEvent(minLabel(), IC.dot, esc(p.n) + " bleibt verletzt liegen und kann nicht weitermachen.", "big");
     if (M.subs < 5) sub(p);
     else { p.off = true; addEvent(minLabel(), IC.dot, "Alle Wechsel aufgebraucht – Fener nur noch zu zehnt."); }
@@ -1330,11 +1380,14 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
       if (!outs.length) return;
       off = weighted(outs, function (p) { return (p.booked ? 2 : 1) * Math.max(0.2, 8 - p.rating); });
     }
+    doSub(off, on, off.pos, false);
+  }
+  function doSub(off, on, pos, manual) {
     off.off = true; off.subbed = true;
     on.used = true;
-    M.onPitch.push({ no: on.no, pos: off.pos, n: on.n, r: on.r, rating: 6.5, booked: false, off: false, subbed: true });
+    M.onPitch.push({ no: on.no, pos: pos, n: on.n, r: on.r, rating: 6.5, booked: false, off: false, subbed: true });
     M.subs++;
-    addEvent(minLabel(), IC.sub, "Wechsel: " + esc(lastName(on.n)) + " kommt für " + esc(lastName(off.n)) + ".");
+    addEvent(minLabel(), IC.sub, (manual ? "Trainer-Entscheidung: " : "Wechsel: ") + esc(lastName(on.n)) + " kommt für " + esc(lastName(off.n)) + ".");
   }
 
   function scoreLine() {
@@ -1383,7 +1436,8 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
   function finish() {
     var res = M.fb.g > M.op.g ? "w" : M.fb.g < M.op.g ? "l" : "d";
     var best = M.onPitch.slice().sort(function (a, b) { return b.rating - a.rating; })[0];
-    var out = { fg: M.fb.g, og: M.op.g, pens: M.pens, scorers: M.fb.scorers.slice(), goals: M.fb.log.slice(), motm: best.n };
+    var out = { fg: M.fb.g, og: M.op.g, pens: M.pens, scorers: M.fb.scorers.slice(), goals: M.fb.log.slice(), motm: best.n, cards: M.cardLog.slice(), injuries: M.injLog.slice(),
+      st: { fb: { shots: M.fb.shots, sot: M.fb.sot, xg: M.fb.xg, corners: M.fb.corners, fouls: M.fb.fouls, y: M.fb.y, red: M.fb.red, poss: M.fb.poss }, op: { shots: M.op.shots, sot: M.op.sot, xg: M.op.xg, corners: M.op.corners, fouls: M.op.fouls, y: M.op.y, red: M.op.red, poss: M.op.poss } } };
     M.out = out;
     if (M.cfg.dry) return;
 
@@ -1444,6 +1498,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     mom.style.background = v >= 0 ? "var(--yellow)" : "var(--opp)";
 
     $("conf-wrap").hidden = !M.conf;
+    if ($("sub-panel").hidden) renderCoach();
     if (M.conf) {
       $("conf").innerHTML = M.conf.map(function (c) {
         return '<li class="' + (c.hit ? "hit" : "") + '"><span>' + esc(c.h) + "</span><b>" + c.ch + ":" + c.ca + "</b><span>" + esc(c.a) + "</span></li>";
@@ -1457,6 +1512,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
       ["Aufs Tor", M.fb.sot, M.op.sot],
       ["Expected Goals", M.fb.xg.toFixed(1), M.op.xg.toFixed(1)],
       ["Ecken", M.fb.corners, M.op.corners],
+      ["Fouls", M.fb.fouls, M.op.fouls],
       ["Gelbe Karten", M.fb.y, M.op.y],
       ["Platzverweise", M.fb.red, M.op.red]
     ];
@@ -1466,6 +1522,44 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
       return '<div class="stat"><span class="v">' + r[1] + '</span><div class="mid"><span class="name">' + r[0] + '</span><div class="split"><i style="width:' + pa + '%"></i><i style="width:' + (100 - pa) + '%"></i></div></div><span class="v">' + r[2] + "</span></div>";
     }).join("");
   }
+
+  // ---------- Trainer: Taktik und Wechsel während des Spiels ----------
+  var subWasRunning = false;
+  function renderCoach() {
+    var show = M && M.live && !M.done && M.speed > 0;
+    $("coach").hidden = !show;
+    if (!show) { $("sub-panel").hidden = true; return; }
+    setSeg("live-tac", "t", M.tacKey);
+    var left = 5 - M.subs;
+    $("sub-open").textContent = left > 0 ? "Spieler wechseln (noch " + left + ")" : "Keine Wechsel mehr";
+    $("sub-open").disabled = left <= 0;
+  }
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest("#live-tac button"); if (!b || !M || M.done) return;
+    if (b.dataset.t === M.tacKey) return;
+    M.tacKey = b.dataset.t; M.tac = TACTICS[M.tacKey];
+    addEvent(minLabel(), IC.dot, "Fener stellt um: <b>" + { def: "defensiv", bal: "ausgewogen", off: "volle Offensive" }[M.tacKey] + "</b>.", "big");
+    renderCoach();
+  });
+  $("sub-open").addEventListener("click", function () {
+    if (!M || M.done || M.subs >= 5) return;
+    subWasRunning = !!timer; clearInterval(timer); timer = null; $("pause").textContent = "Weiter";
+    var outs = fbPlayers(), ins = M.bench.filter(function (p) { return !p.used; });
+    $("sub-off").innerHTML = outs.map(function (p, i) { return '<option value="' + M.onPitch.indexOf(p) + '">' + esc(p.pos + " · " + p.n + " · Note " + Math.min(10, p.rating).toFixed(1) + (p.booked ? " · 🟨" : "")) + "</option>"; }).join("");
+    $("sub-on").innerHTML = ins.map(function (p) { return '<option value="' + M.bench.indexOf(p) + '">' + esc(p.pos + " · " + p.n + " (" + p.r + ")") + "</option>"; }).join("");
+    $("sub-auto").checked = M.autoSub;
+    $("sub-panel").hidden = false;
+    $("sub-do").disabled = !ins.length;
+  });
+  function closeSub() { $("sub-panel").hidden = true; if (subWasRunning && M && !M.done) { run(); $("pause").textContent = "Pause"; } renderCoach(); }
+  $("sub-cancel").addEventListener("click", function () { M.autoSub = $("sub-auto").checked; closeSub(); });
+  $("sub-do").addEventListener("click", function () {
+    var off = M.onPitch[+$("sub-off").value], on = M.bench[+$("sub-on").value];
+    if (!off || !on || M.subs >= 5) return;
+    M.autoSub = $("sub-auto").checked;
+    doSub(off, on, on.pos, true);
+    render(); closeSub();
+  });
 
   function startLive(cfg) {
     clearInterval(timer);
@@ -1510,7 +1604,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     var opp = findTeam(prefs.opp) || LEAGUE[0];
     var isEurope = EUROPE.indexOf(opp) >= 0;
     return {
-      opp: { n: opp.n, r: opp.r, st: opp.st, rival: opp.rival }, venue: prefs.venue,
+      opp: { n: opp.n, r: teamRating(opp.n), st: opp.st, rival: opp.rival }, venue: prefs.venue,
       fbRating: prefs.form === null ? teamStrength() : prefs.form, ko: prefs.ko,
       comp: prefs.ko ? (isEurope ? "Europapokal · K.-o." : "Pokal · K.-o.") : (isEurope ? "Testspiel · Europa" : "Testspiel")
     };
@@ -1548,10 +1642,29 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
   // =====================================================================
   var S = null, seasonTab = "fix", predCache = {}, oddsResult = null;
 
-  function teamRating(name) {
+  // Formfaktor: Die Stärkewerte werden anhand der echten Tordifferenz pro Spiel nachjustiert.
+  // Je mehr Spiele, desto mehr Gewicht (nach 10 Spielen etwa die Hälfte), höchstens ±6.
+  var FORM = {};
+  function computeForm(rows) {
+    var form = {}, teams = [FB_NAME].concat(LEAGUE.map(function (t) { return t.n; }));
+    var avg = teams.reduce(function (sum, n) { return sum + baseRating(n); }, 0) / teams.length;
+    rows.forEach(function (t) {
+      if (!t.p || t.gd === undefined || t.gd === null) return;
+      var dObs = Math.log(t.gd / t.p / 2.7 + Math.sqrt(Math.pow(t.gd / t.p / 2.7, 2) + 1)); // asinh
+      var rObs = avg + 25 * dObs, r = baseRating(t.n), w = t.p / (t.p + 10);
+      form[t.n] = Math.round(Math.max(-6, Math.min(6, w * (rObs - r))) * 10) / 10;
+    });
+    return form;
+  }
+  function baseRating(name) {
     if (name === FB_NAME) return FB_RATING;
     var t = findTeam(name); return t ? t.r : 70;
   }
+  function teamRating(name) {
+    if (name === FB_NAME) return FB_RATING;
+    return Math.round((baseRating(name) + (FORM[name] || 0)) * 10) / 10;
+  }
+  function formText(name) { var f = FORM[name] || 0; return f ? (f > 0 ? "+" : "") + f.toFixed(1) : "±0"; }
   function fxKey(f) { return f.comp + "|" + f.opp + "|" + f.v + (f.stage && f.stage !== "league" ? "|" + f.stage + (f.leg || "") : ""); }
 
   function baseFixtures() {
@@ -1607,6 +1720,11 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
   function initSeason(mode) {
     mode = mode || (S && S.mode) || "current";
     var fresh = mode === "start";
+    // Form immer aus dem echten Stand (auch im Modus ab 1. Spieltag die beste Schätzung der Stärke)
+    var formRows = REAL && REAL.table && REAL.table.length >= 10
+      ? REAL.table.map(function (t) { return { n: mapLeagueName(t.n), p: t.p, gd: t.gf - t.ga }; })
+      : TABLE_START.map(function (t) { return { n: t.n, p: t.p, gd: t.gf !== null ? t.gf - t.ga : t.gd }; });
+    FORM = computeForm(formRows);
     var fixtures = baseFixtures();
     if (fresh) fixtures.forEach(function (f) { f.done = false; f.real = false; f.fg = null; f.og = null; });
     var realTable = mergeReal(fixtures, fresh);
@@ -1628,7 +1746,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
       v: 2, mode: mode, nextId: fixtures.length + 1, fixtures: fixtures, table: table, bg: bg,
       cl: { stage: "league", rank: null, ko: [], out: false, won: false },
       cup: { stage: 0, out: false, won: false, ko: [] },
-      stats: {}, realAt: REAL && !fresh ? REAL.at : null
+      stats: {}, avail: {}, news: [], form: FORM, realAt: REAL && !fresh ? REAL.at : null
     };
     addCupFixture();
     sortFixtures();
@@ -1685,13 +1803,78 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     var comp = fx.comp === "SL" ? "Süper Lig · " + fx.rd : fx.comp === "CL" ? "Champions League · " + fx.rd : "Türkiye Kupası · " + fx.rd;
     var agg = null;
     if (fx.leg === 2) { var first = firstLeg(fx); agg = [first.fg, first.og]; }
+    var lu = lineupFor(fx);
     return {
-      opp: oppCfg(fx),
+      opp: oppCfg(fx), xi: lu.xi, bench: lu.bench,
       venue: fx.v === "H" ? "home" : fx.v === "A" ? "away" : "neutral",
-      fbRating: teamStrength(), comp: comp, ko: !!fx.ko, agg: agg,
+      fbRating: Math.round((teamStrength(lu.xi) + (FORM[FB_NAME] || 0)) * 10) / 10, comp: comp, ko: !!fx.ko, agg: agg,
       season: { fx: fx },
       round: fx.comp === "SL" && !noRound ? genLeagueRound(fx.opp) : null
     };
+  }
+
+  // ---------- Sperren und Verletzungen ----------
+  // Gelbsperre: Süper Lig nach jeder 4. Gelben, CL und Pokal nach jeder 3. (wettbewerbsbezogen).
+  // Gelb-Rot: 1 Spiel, glatt Rot: 2 Spiele im selben Wettbewerb. Verletzungen gelten für alle Spiele.
+  var YELLOW_LIMIT = { SL: 4, CL: 3, CUP: 3 };
+  var COMP_NAME = { SL: "Liga", CL: "Champions League", CUP: "Pokal" };
+  function avail(n) {
+    if (!S.avail) S.avail = {};
+    return S.avail[n] || (S.avail[n] = { y: { SL: 0, CL: 0, CUP: 0 }, sus: { SL: 0, CL: 0, CUP: 0 }, inj: 0 });
+  }
+  function outReason(n, comp) {
+    var a = S && S.avail && S.avail[n]; if (!a) return null;
+    if (a.inj > 0) return "verletzt, noch " + a.inj + (a.inj === 1 ? " Spiel" : " Spiele");
+    if (comp && a.sus[comp] > 0) return "gesperrt in " + { SL: "der Liga", CL: "der CL", CUP: "dem Pokal" }[comp] + (a.sus[comp] > 1 ? ", noch " + a.sus[comp] + " Spiele" : "");
+    return null;
+  }
+  function injuryGames() {
+    var x = rnd();
+    return x < 0.4 ? 1 : x < 0.7 ? 2 + Math.floor(rnd() * 2) : x < 0.93 ? 4 + Math.floor(rnd() * 5) : 10 + Math.floor(rnd() * 8);
+  }
+  var POS_GROUP = { TW: "TW", RV: "D", LV: "D", IV: "D", ZDM: "M", ZM: "M", ZOM: "M", RA: "A", LA: "A", ST: "A" };
+  // Aufstellung für ein Saisonspiel: Ausfälle werden positionsgerecht von der Bank ersetzt
+  function lineupFor(fx) {
+    var comp = fx.comp, missing = [];
+    var bench = squad.bench.filter(function (p) { return !outReason(p.n, comp); }).slice();
+    var xi = squad.xi.map(function (p) {
+      var why = outReason(p.n, comp);
+      if (!why) return p;
+      var cands = bench.filter(function (b) { return b.pos === p.pos; });
+      if (!cands.length) cands = bench.filter(function (b) { return POS_GROUP[b.pos] === POS_GROUP[p.pos]; });
+      if (!cands.length && p.pos !== "TW") cands = bench.filter(function (b) { return b.pos !== "TW"; });
+      cands.sort(function (a, b) { return (b.r || 0) - (a.r || 0); });
+      var rep = cands[0];
+      missing.push({ n: p.n, why: why, by: rep ? rep.n : null });
+      if (!rep) return null;
+      bench.splice(bench.indexOf(rep), 1);
+      return { no: rep.no, pos: p.pos, n: rep.n, r: rep.r };
+    }).filter(Boolean);
+    return { xi: xi, bench: bench, missing: missing };
+  }
+  function fbSeasonStrength(fx) { return Math.round((teamStrength(lineupFor(fx).xi) + (FORM[FB_NAME] || 0)) * 10) / 10; }
+  // Nach jedem Fener-Spiel: Sperren/Verletzungen herunterzählen, neue Karten und Verletzungen eintragen
+  function applyAvail(fx, res) {
+    if (!S.avail) S.avail = {};
+    var comp = fx.comp, news = [];
+    Object.keys(S.avail).forEach(function (n) {
+      var a = S.avail[n];
+      if (a.inj > 0) { a.inj--; if (!a.inj) news.push(n + " ist wieder fit."); }
+      else if (a.sus[comp] > 0) { a.sus[comp]--; if (!a.sus[comp]) news.push(n + " hat seine Sperre (" + COMP_NAME[comp] + ") abgesessen."); }
+    });
+    (res.cards || []).forEach(function (c) {
+      var a = avail(c.n);
+      if (c.t === "y") {
+        a.y[comp]++;
+        if (a.y[comp] % YELLOW_LIMIT[comp] === 0) { a.sus[comp]++; news.push(c.n + " sieht die " + a.y[comp] + ". Gelbe und fehlt im nächsten Spiel (" + COMP_NAME[comp] + ")."); }
+      } else if (c.t === "yr") { a.sus[comp] += 1; news.push(c.n + " ist nach Gelb-Rot für 1 Spiel gesperrt (" + COMP_NAME[comp] + ")."); }
+      else { a.sus[comp] += 2; news.push(c.n + " ist nach Rot für 2 Spiele gesperrt (" + COMP_NAME[comp] + ")."); }
+    });
+    (res.injuries || []).forEach(function (n) {
+      var g = injuryGames(), a = avail(n); a.inj = Math.max(a.inj, g);
+      news.push(n + " hat sich verletzt und fällt " + g + (g === 1 ? " Spiel" : " Spiele") + " aus.");
+    });
+    if (!S._dry) S.news = news;
   }
 
   function addResult(team, gf, ga) {
@@ -1751,6 +1934,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     if (!fx || fx.done) return;
     fx.done = true; fx.fg = res.fg; fx.og = res.og; fx.pens = res.pens || null; fx.scorers = res.scorers || [];
     if (!S._dry) addStats(res);
+    applyAvail(fx, res);
     predCache = {};
 
     if (fx.comp === "SL") {
@@ -1860,7 +2044,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
 
   // ---------- Prognose fürs nächste Spiel (1000 Simulationen) ----------
   function predict(fx) {
-    var k = fx.id + "|" + teamStrength() + "|" + prefs.tactic;
+    var k = fx.id + "|" + fbSeasonStrength(fx) + "|" + prefs.tactic + "|" + JSON.stringify(lineupFor(fx).missing);
     if (predCache[k]) return predCache[k];
     var N = 1000, w = 0, d = 0, l = 0, adv = 0, scores = {};
     for (var i = 0; i < N; i++) {
@@ -1880,7 +2064,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
 
   // ---------- Saison-Prognose (300 schnelle Durchläufe) ----------
   function fastPlay(fx) {
-    var adv = fx.v === "H" ? 3 : fx.v === "A" ? -3 : 0, tac = tactic(), fbR = teamStrength();
+    var adv = fx.v === "H" ? 3 : fx.v === "A" ? -3 : 0, tac = tactic(), fbR = fbSeasonStrength(fx);
     var dd = (fbR - fx.r + adv) / 25;
     var fg = poisson(1.35 * Math.exp(dd) * tac.fb), og = poisson(1.35 * Math.exp(-dd) * tac.op);
     var pens = null;
@@ -1974,6 +2158,12 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
         '<div class="meta"><span>Nächstes Spiel · ' + esc(badge) + (t && t.rival ? " · Derby" : "") + '</span><span>' + fmtDateLong(nx.d) + '</span></div>' +
         '<div class="vs">' + vsText(nx) + '</div>' +
         '<p class="note">' + esc(nx.rd) + (note ? " · " + esc(note) : "") + '</p>' +
+        (function () {
+          var lu = lineupFor(nx), out = "";
+          if (lu.missing.length) out += '<p class="note miss"><b>Fehlt:</b> ' + lu.missing.map(function (m) { return esc(m.n) + " (" + esc(m.why) + ")" + (m.by ? " → " + esc(lastName(m.by)) : ""); }).join(", ") + "</p>";
+          if (S.news && S.news.length) out += '<p class="note">' + S.news.map(esc).join(" ") + "</p>";
+          return out;
+        })() +
         '<div class="probs"><div class="probbar"><i class="w" style="width:' + pr.w * 100 + '%"></i><i class="d" style="width:' + pr.d * 100 + '%"></i><i class="l" style="width:' + pr.l * 100 + '%"></i></div>' +
         '<div class="problbl"><span>Sieg <b>' + pct(pr.w) + '</b></span><span>Remis <b>' + pct(pr.d) + '</b></span><span>Niederlage <b>' + pct(pr.l) + '</b></span></div>' +
         '<p class="note">Wahrscheinlichstes Ergebnis ' + pr.best + " (" + pct(pr.bestP) + ")" + (pr.adv !== null ? " · Weiterkommen " + pct(pr.adv) : "") + " · aus 1000 Simulationen</p></div>" +
@@ -2298,6 +2488,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
           RL.fbFx = res[0] || null;
           if (RL.fbFx) {
             storeLive(RL.fbFx);
+            trackChance(RL.fbFx);
             if (FINISHED.indexOf(RL.fbFx.fixture.status.short) >= 0) {
               var r = applyRealToSeason(RL.fbFx);
               if (r) RL.info = "Abpfiff! Automatisch in die Saison eingetragen: " + r.sx.rd + " " + r.fg + ":" + r.og + " aus Fener-Sicht.";
@@ -2473,6 +2664,62 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     }).join("") + "</div>";
   }
 
+  // ---------- Verlauf der Siegchance als Grafik ----------
+  RL.chanceLogs = {};
+  function preChance(f) {
+    var fbHome = isFb(f.teams.home.name), opp = fbHome ? f.teams.away.name : f.teams.home.name;
+    var d = (FB_RATING - oppRatingApi(opp, f.league.id) + (fbHome ? 3 : -3)) / 25, lf = 1.35 * Math.exp(d), lo = 1.35 * Math.exp(-d), w = 0, dr = 0;
+    for (var i = 0; i <= 10; i++) for (var j = 0; j <= 10; j++) { var p = poisP(i, lf) * poisP(j, lo); if (i > j) w += p; else if (i === j) dr += p; }
+    return { w: w, d: dr };
+  }
+  function trackChance(f) {
+    if (!f || f.chance) return;
+    var id = f.fixture.id, log = RL.chanceLogs[id] || (RL.chanceLogs[id] = []);
+    if (!log.length) { var p = preChance(f); log.push({ m: 0, w: Math.round(p.w * 100), d: Math.round(p.d * 100) }); }
+    var c = liveChance(f), el = (f.fixture.status.elapsed || 0) + (f.fixture.status.extra || 0);
+    if (c && el > log[log.length - 1].m) log.push({ m: el, w: Math.round(c.w * 100), d: Math.round(c.d * 100) });
+    f.chance = log;
+  }
+  function chartHtml(f) {
+    var pts = f.chance; if (!pts || pts.length < 2) return "";
+    var W = 320, H = 130, L = 30, R = 8, T = 10, B = 22;
+    var maxM = Math.max(90, pts[pts.length - 1].m);
+    function x(m) { return L + (W - L - R) * m / maxM; }
+    function y(v) { return T + (H - T - B) * (1 - v / 100); }
+    var win = pts.map(function (p, i) { return (i ? "L" : "M") + x(p.m).toFixed(1) + " " + y(p.w).toFixed(1); }).join(" ");
+    var loss = pts.map(function (p, i) { return (i ? "L" : "M") + x(p.m).toFixed(1) + " " + y(Math.max(0, 100 - p.w - p.d)).toFixed(1); }).join(" ");
+    var grid = [0, 50, 100].map(function (v) { return '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="var(--navy-3)" stroke-width="1"/><text x="' + (L - 5) + '" y="' + (y(v) + 4) + '" text-anchor="end" font-size="10" fill="var(--muted)">' + v + "%</text>"; }).join("");
+    var ticks = [0, 45, 90].map(function (m) { return '<text x="' + x(m) + '" y="' + (H - 6) + '" text-anchor="middle" font-size="10" fill="var(--muted)">' + m + "'</text>"; }).join("");
+    var goals = (f.events || []).filter(function (e) { return e.type === "Goal" && e.detail !== "Missed Penalty"; }).map(function (e) {
+      var m = (e.time.elapsed || 0) + (e.time.extra || 0), fb = isFb(e.team.name);
+      return '<line x1="' + x(m) + '" x2="' + x(m) + '" y1="' + T + '" y2="' + (H - B) + '" stroke="' + (fb ? "var(--yellow)" : "var(--opp)") + '" stroke-dasharray="2 3" stroke-width="1"/><circle cx="' + x(m) + '" cy="' + T + '" r="3.5" fill="' + (fb ? "var(--yellow)" : "var(--opp)") + '"/>';
+    }).join("");
+    return '<div class="chart-wrap"><p class="label" style="margin:0 0 4px">Verlauf der Siegchance</p><svg class="chart" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Verlauf der Siegchance von Fenerbahçe über das Spiel">' + grid + ticks + goals +
+      '<path d="' + loss + '" fill="none" stroke="var(--opp)" stroke-width="2" stroke-linejoin="round"/><path d="' + win + '" fill="none" stroke="var(--yellow)" stroke-width="2.5" stroke-linejoin="round"/>' +
+      '<circle cx="' + x(pts[pts.length - 1].m) + '" cy="' + y(pts[pts.length - 1].w) + '" r="3.5" fill="var(--yellow)"/></svg>' +
+      '<div class="chart-legend"><span><i style="background:var(--yellow)"></i>Sieg Fener</span><span><i style="background:var(--opp)"></i>Niederlage</span><span>Punkte oben: Tore</span></div></div>';
+  }
+
+  // ---------- Benachrichtigungen (im Helfer gespeichert) ----------
+  var PUSH_LABELS = [["reminder", "Erinnerung am Spieltag (mit Prognose)"], ["lineup", "Aufstellung"], ["kickoff", "Anpfiff"], ["goals", "Tore für Fener"], ["oppgoals", "Gegentore"], ["cards", "Rote Karten und verschossene Elfmeter"], ["var", "Videobeweis (Tor zurückgenommen)"], ["ht", "Halbzeit"], ["ft", "Abpfiff"], ["rivals", "Ergebnisse von Galatasaray, Beşiktaş, Trabzonspor"], ["chance", "Siegchance in den Nachrichten"], ["stats", "Statistik in den Nachrichten"]];
+  function renderPushPrefs() {
+    var pr = RL.helper && RL.helperState && RL.helperState.prefs;
+    $("push-prefs-wrap").hidden = !pr;
+    if (!pr) return;
+    $("push-prefs").innerHTML = PUSH_LABELS.map(function (x) {
+      return '<label for="pp-' + x[0] + '"><input type="checkbox" id="pp-' + x[0] + '" data-pp="' + x[0] + '"' + (pr[x[0]] !== false ? " checked" : "") + "><span>" + esc(x[1]) + "</span></label>";
+    }).join("");
+  }
+  document.addEventListener("change", function (e) {
+    var t = e.target; if (!t.dataset || !t.dataset.pp || !RL.helper) return;
+    var body = {}; body[t.dataset.pp] = t.checked;
+    $("rl-helper-msg").textContent = "Speichere …";
+    fetch(RL.helper + "/settings", { method: "POST", body: JSON.stringify(body) }).then(function (r) { return r.json(); }).then(function (j) {
+      if (RL.helperState) RL.helperState.prefs = j.prefs;
+      $("rl-helper-msg").textContent = "Gespeichert. Der Helfer schickt ab sofort nur noch die ausgewählten Nachrichten.";
+    }, function () { t.checked = !t.checked; $("rl-helper-msg").textContent = "Konnte nicht speichern. Ist der Helfer erreichbar?"; });
+  });
+
   function matchCard(f, title) {
     var h = f.teams.home.name, a = f.teams.away.name;
     var live = ["NS", "FT", "AET", "PEN", "PST", "CANC", "TBD"].indexOf(f.fixture.status.short) < 0;
@@ -2485,6 +2732,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
       ((isFb(h) || isFb(a)) && liveChance(f) ? (function (c) { return '<div class="probs"><div class="probbar"><i class="w" style="width:' + c.w * 100 + '%"></i><i class="d" style="width:' + c.d * 100 + '%"></i><i class="l" style="width:' + c.l * 100 + '%"></i></div><div class="problbl"><span>Siegchance jetzt <b>' + pct(c.w) + '</b></span><span>Remis <b>' + pct(c.d) + '</b></span><span>Niederlage <b>' + pct(c.l) + "</b></span></div></div>"; })(liveChance(f)) : "") +
       (evs ? '<ul class="ticker">' + evs + "</ul>" : live ? '<p class="hint">Noch keine Ereignisse.</p>' : "") +
       ((isFb(h) || isFb(a)) ? statsHtml(f) : "") +
+      ((isFb(h) || isFb(a)) ? chartHtml(f) : "") +
       seasonSyncButton(f) +
       "</div>";
   }
@@ -2640,6 +2888,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     var st = $("rl-status");
     $("rl-key").value = RL.key ? RL.key : "";
     $("rl-helper").value = RL.helper || "";
+    renderPushPrefs();
     renderTips();
     renderUsage();
     if (!RL.key && !RL.helper) {
@@ -2730,12 +2979,28 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
   });
   $("rl-others-on").addEventListener("change", function () { prefs.rlOthers = this.checked; savePrefs(); if (!prefs.rlOthers) RL.others = []; renderReal(); });
 
+  // Messpunkt für Tests: viele Spiele ohne Anzeige durchrechnen (verändert nichts)
+  window.__fenerCal = function (oppR, venue, N, fbR) {
+    var acc = { n: N, w: 0, d: 0, l: 0, fg: 0, og: 0, fb: {}, op: {} };
+    for (var i = 0; i < N; i++) {
+      var o = simulateSilently({ opp: { n: "Test", r: oppR, st: "" }, venue: venue, fbRating: fbR || FB_RATING, comp: "Test", ko: false, dry: true });
+      acc.fg += o.fg; acc.og += o.og; if (o.fg > o.og) acc.w++; else if (o.fg === o.og) acc.d++; else acc.l++;
+      ["fb", "op"].forEach(function (side) { Object.keys(o.st[side]).forEach(function (k) { acc[side][k] = (acc[side][k] || 0) + o.st[side][k]; }); });
+    }
+    ["fg", "og", "w", "d", "l"].forEach(function (k) { acc[k] /= N; });
+    ["fb", "op"].forEach(function (side) { Object.keys(acc[side]).forEach(function (k) { acc[side][k] = Math.round(acc[side][k] / N * 100) / 100; }); });
+    return acc;
+  };
+
   // =====================================================================
   // Start
   // =====================================================================
   S = load("fb.season.v2", null);
   if (!S || S.v !== 2) initSeason();
   S._dry = false;
+  if (!S.avail) S.avail = {};
+  FORM = S.form || computeForm(TABLE_START.map(function (t) { return { n: t.n, p: t.p, gd: t.gf !== null ? t.gf - t.ga : t.gd }; }));
+  if (!S.form) { S.form = FORM; saveSeason(); }
   renderSoundBtn();
   refreshSetup();
   showTab("season");
