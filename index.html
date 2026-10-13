@@ -583,9 +583,15 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
       <div id="rl-status"></div>
       <div id="rl-fb"></div>
       <section class="panel" id="sofa">
-        <p class="label">Live bei Sofascore (Echtzeit)</p>
-        <div id="sofa-frame"></div>
-        <div id="sofa-setup">
+        <p class="label">Echtzeit-Spielstand</p>
+        <p class="hint" style="margin:0 0 10px">Ein Tipp öffnet den Live-Spielstand mit Toren in Echtzeit. Keine Einrichtung nötig.</p>
+        <div class="row">
+          <a class="cta" href="https://www.google.com/search?q=Fenerbah%C3%A7e+live" target="_blank" rel="noopener" style="flex:1;text-align:center;text-decoration:none;font-size:17px;padding:12px">Live bei Google</a>
+          <a class="ghost" href="https://www.sofascore.com/de/search?q=Fenerbah%C3%A7e" target="_blank" rel="noopener" style="flex:1;text-align:center;text-decoration:none">Bei Sofascore</a>
+        </div>
+        <div id="sofa-frame" style="margin-top:10px"></div>
+        <details id="sofa-adv" style="margin-top:10px"><summary class="hint" style="cursor:pointer">Für Fortgeschrittene: Sofascore-Widget direkt in der App anzeigen</summary>
+        <div id="sofa-setup" style="margin-top:8px">
           <p class="hint" style="margin:0 0 8px">Sofascore bietet kostenlose Live-Widgets zum Einbinden an. So richtest du es ein: <a href="https://corporate.sofascore.com/widgets" target="_blank" rel="noopener" style="color:var(--yellow)">corporate.sofascore.com/widgets</a> öffnen, ein Widget für Fenerbahçe oder die Süper Lig auswählen, den Code kopieren und hier einfügen.</p>
           <div class="key-row">
             <input id="sofa-code" type="text" placeholder="Widget-Code oder Link einfügen" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Sofascore-Widget">
@@ -593,10 +599,8 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
           </div>
           <p class="hint" id="sofa-msg" style="margin-top:6px"></p>
         </div>
-        <div class="row" style="margin-top:8px">
-          <a class="ghost" href="https://www.sofascore.com/de/" target="_blank" rel="noopener" style="flex:1;text-align:center;text-decoration:none">Sofascore öffnen</a>
-          <button class="ghost" type="button" id="sofa-remove" hidden style="flex:1">Widget entfernen</button>
-        </div>
+        <button class="ghost" type="button" id="sofa-remove" hidden style="margin-top:8px">Widget entfernen</button>
+        </details>
       </section>
       <section class="panel" id="rl-lineup-wrap" hidden>
         <p class="label">Echte Aufstellung</p>
