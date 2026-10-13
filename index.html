@@ -434,6 +434,21 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
         </div>
       </section>
 
+      <section>
+        <p class="label">Stadion-Sound</p>
+        <div class="seg" id="voice">
+          <button type="button" data-v="1" aria-pressed="true">Kommentator an</button>
+          <button type="button" data-v="0" aria-pressed="false">Kommentator aus</button>
+        </div>
+        <div class="btn-row" style="margin-top:8px">
+          <button class="ghost" type="button" id="snd-test">Torjubel anhören</button>
+          <button class="ghost" type="button" id="snd-pick">Eigenen Torjubel wählen</button>
+          <button class="ghost" type="button" id="snd-del" hidden>Eigenen löschen</button>
+        </div>
+        <input type="file" id="snd-file" accept="audio/*" hidden>
+        <p class="hint" id="snd-info">Jubel, Tröten und Klatschen werden live erzeugt. Du kannst auch eine eigene Audiodatei (z. B. aus „Dateien“) als Torjubel nehmen – sie bleibt nur auf deinem iPhone. Stummschalter am iPhone aus, sonst hörst du nichts.</p>
+      </section>
+
       <button class="cta" id="kickoff" type="button">Anpfiff</button>
     </div>
 
@@ -705,7 +720,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
   // DATEN – eingebauter Stand 13.10.2026 (nach dem 7. Spieltag)
   // Mit Hintergrund-Helfer wird das automatisch durch den echten Stand ersetzt.
   // =====================================================================
-  var APP_VERSION = "21 (14.10.2026)";
+  var APP_VERSION = "22 (14.10.2026)";
   var FB_NAME = "Fenerbahçe";
   var FB_RATING = 84;
   var FB_STADIUM = "Chobani Stadyumu";
@@ -949,45 +964,211 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
   function tactic() { return TACTICS[prefs.tactic] || TACTICS.bal; }
 
   // =====================================================================
-  // Ton (Web Audio, startet erst nach Antippen)
+  // Ton: Stadion-Atmosphäre aus Web Audio (startet erst nach Antippen)
+  // Alles wird live erzeugt: Menge mit Hall, Klatschen, Tröten, Pfiffe, Schiedsrichterpfeife.
+  // Dazu optional ein Kommentator (Sprachausgabe des iPhones) und ein eigener Torjubel.
   // =====================================================================
-  var AC = null, noiseBuf = null;
+  var AC = null, MASTER = null, REVERB = null, PINK = null, AMB = null, CUSTOM = null;
   function audio() {
-    if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { AC = null; } }
+    if (!AC) {
+      try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { AC = null; }
+      if (AC) setupChain();
+    }
     if (AC && AC.state === "suspended") AC.resume();
     return AC;
   }
-  function noise() {
-    if (noiseBuf) return noiseBuf;
-    var len = AC.sampleRate * 3; noiseBuf = AC.createBuffer(1, len, AC.sampleRate);
-    var d = noiseBuf.getChannelData(0); for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
-    return noiseBuf;
+  // Hauptkette: alles → Kompressor → Lautsprecher, dazu ein Hall (Stadion-Akustik)
+  function setupChain() {
+    var comp = AC.createDynamicsCompressor();
+    comp.threshold.value = -14; comp.knee.value = 10; comp.ratio.value = 6; comp.attack.value = 0.005; comp.release.value = 0.3;
+    MASTER = AC.createGain(); MASTER.gain.value = 0.9;
+    MASTER.connect(comp); comp.connect(AC.destination);
+    REVERB = AC.createConvolver();
+    var len = Math.floor(AC.sampleRate * 2.6), ir = AC.createBuffer(2, len, AC.sampleRate);
+    for (var c = 0; c < 2; c++) { var d = ir.getChannelData(c); for (var i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2); }
+    REVERB.buffer = ir;
+    var wet = AC.createGain(); wet.gain.value = 0.45; REVERB.connect(wet); wet.connect(comp);
+  }
+  // Rosa Rauschen (klingt natürlicher als weißes) in Stereo
+  function pink() {
+    if (PINK) return PINK;
+    var len = AC.sampleRate * 4; PINK = AC.createBuffer(2, len, AC.sampleRate);
+    for (var c = 0; c < 2; c++) {
+      var d = PINK.getChannelData(c), b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+      for (var i = 0; i < len; i++) {
+        var w = Math.random() * 2 - 1;
+        b0 = 0.99886 * b0 + w * 0.0555179; b1 = 0.99332 * b1 + w * 0.0750759; b2 = 0.969 * b2 + w * 0.153852;
+        b3 = 0.8665 * b3 + w * 0.3104856; b4 = 0.55 * b4 + w * 0.5329522; b5 = -0.7616 * b5 - w * 0.016898;
+        d[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.11; b6 = w * 0.115926;
+      }
+    }
+    return PINK;
   }
   function soundOk() { return prefs.sound && M && M.live && M.speed > 0 && AC; }
-  function crowd(dur, freq, vol) {
-    var src = AC.createBufferSource(); src.buffer = noise();
-    var f = AC.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = freq; f.Q.value = 0.7;
-    var g = AC.createGain(), t = AC.currentTime;
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.25); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    src.connect(f); f.connect(g); g.connect(AC.destination); src.start(t); src.stop(t + dur);
+  function out(node, pan, rev) {
+    var p = AC.createStereoPanner ? AC.createStereoPanner() : null;
+    if (p) { p.pan.value = pan || 0; node.connect(p); node = p; }
+    node.connect(MASTER);
+    if (rev) { var r = AC.createGain(); r.gain.value = rev; node.connect(r); r.connect(REVERB); }
   }
-  function tone(freq, start, dur, type, vol) {
-    var o = AC.createOscillator(), g = AC.createGain(), t = AC.currentTime + start;
-    o.type = type; o.frequency.value = freq;
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + dur + 0.05);
+  // Menge, die einen Vokal "singt" (Formanten: ah, oh, eh …) mit lebendigem Auf und Ab
+  var VOWELS = { ah: [730, 1090, 2440], oh: [570, 840, 2410], uh: [300, 870, 2240], eh: [530, 1840, 2480] };
+  function crowdVoice(start, dur, peak, vowel, pan, opts) {
+    opts = opts || {};
+    var t = AC.currentTime + start, src = AC.createBufferSource(); src.buffer = pink(); src.loop = true;
+    var sum = AC.createGain(); sum.gain.value = 1;
+    VOWELS[vowel || "ah"].forEach(function (f, k) {
+      var bp = AC.createBiquadFilter(); bp.type = "bandpass"; bp.Q.value = 5 + k * 2;
+      bp.frequency.setValueAtTime(f * (opts.from || 1), t); bp.frequency.linearRampToValueAtTime(f * (opts.to || 1), t + dur);
+      var g = AC.createGain(); g.gain.value = [1, 0.6, 0.25][k];
+      src.connect(bp); bp.connect(g); g.connect(sum);
+    });
+    var body = AC.createBiquadFilter(); body.type = "lowpass"; body.frequency.value = 3600; sum.connect(body);
+    var env = AC.createGain(); body.connect(env);
+    env.gain.setValueAtTime(0.0001, t);
+    env.gain.exponentialRampToValueAtTime(peak, t + (opts.attack || 0.35));
+    // Wellen in der Lautstärke, damit es nach vielen Menschen klingt
+    for (var x = t + 0.5; x < t + dur - 0.6; x += 0.35 + Math.random() * 0.35) env.gain.linearRampToValueAtTime(peak * (0.7 + Math.random() * 0.35), x);
+    env.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    out(env, pan, 0.6);
+    src.start(t, Math.random() * 3); src.stop(t + dur + 0.1);
   }
-  function sfxGoal(fb) {
-    if (!soundOk()) return;
+  // Viele Hände, leicht versetzt
+  function clapPattern(start, pattern, reps, vol) {
+    var beat = 0;
+    for (var r = 0; r < reps; r++) {
+      pattern.forEach(function (off) {
+        for (var h = 0; h < 14; h++) clap(start + beat + off + (Math.random() - 0.5) * 0.035, vol * (0.6 + Math.random() * 0.4), Math.random() * 1.6 - 0.8);
+      });
+      beat += 1.7;
+    }
+  }
+  function clap(at, vol, pan) {
+    var t = AC.currentTime + at, src = AC.createBufferSource(); src.buffer = pink();
+    var bp = AC.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 1300 + Math.random() * 1400; bp.Q.value = 1.2;
+    var g = AC.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol * 0.12, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+    src.connect(bp); bp.connect(g); out(g, pan, 0.4);
+    src.start(t, Math.random() * 3); src.stop(t + 0.1);
+  }
+  // Fan-Tröte (drei leicht verstimmte Sägezähne)
+  function airhorn(at, dur, vol, pitch) {
+    var t = AC.currentTime + at, f = pitch || 233;
+    var lp = AC.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 2600; lp.Q.value = 2;
+    var g = AC.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.05); g.gain.setValueAtTime(vol, t + dur - 0.08); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    [1, 1.007, 2.003].forEach(function (m, k) {
+      var o = AC.createOscillator(); o.type = "sawtooth";
+      o.frequency.setValueAtTime(f * m, t); o.frequency.linearRampToValueAtTime(f * m * 0.97, t + dur);
+      var og = AC.createGain(); og.gain.value = k === 2 ? 0.35 : 0.5; o.connect(og); og.connect(lp);
+      o.start(t); o.stop(t + dur + 0.05);
+    });
+    lp.connect(g); out(g, Math.random() * 1.2 - 0.6, 0.35);
+  }
+  // Pfiffe aus der Kurve (bei Gegentor)
+  function whistles(at, n, vol) {
+    for (var i = 0; i < n; i++) {
+      var t = AC.currentTime + at + Math.random() * 1.8, o = AC.createOscillator(), g = AC.createGain(), f = 2200 + Math.random() * 1400;
+      o.type = "sine"; o.frequency.setValueAtTime(f, t); o.frequency.linearRampToValueAtTime(f * (0.9 + Math.random() * 0.25), t + 0.8);
+      var lfo = AC.createOscillator(), lg = AC.createGain(); lfo.frequency.value = 6 + Math.random() * 4; lg.gain.value = 40; lfo.connect(lg); lg.connect(o.frequency);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.06); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.7 + Math.random() * 0.6);
+      o.connect(g); out(g, Math.random() * 1.6 - 0.8, 0.5);
+      o.start(t); lfo.start(t); o.stop(t + 1.5); lfo.stop(t + 1.5);
+    }
+  }
+  // Schiedsrichterpfeife mit Triller
+  function refWhistle(at, dur, vol) {
+    var t = AC.currentTime + at, o = AC.createOscillator(), o2 = AC.createOscillator(), g = AC.createGain(), am = AC.createOscillator(), amg = AC.createGain();
+    o.type = "sine"; o.frequency.value = 2850; o2.type = "sine"; o2.frequency.value = 5700;
+    am.frequency.value = 28; amg.gain.value = 0.45; am.connect(amg); amg.connect(g.gain);
+    var g2 = AC.createGain(); g2.gain.value = 0.18; o2.connect(g2); g2.connect(g); o.connect(g);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.02); g.gain.setValueAtTime(vol, t + dur - 0.05); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    out(g, 0, 0.5);
+    [o, o2, am].forEach(function (x) { x.start(t); x.stop(t + dur + 0.05); });
+  }
+  // Leises Stadion-Rauschen während des Spiels
+  function startAmbient() {
+    if (!AC || AMB || !prefs.sound) return;
+    var src = AC.createBufferSource(); src.buffer = pink(); src.loop = true;
+    var lp = AC.createBiquadFilter(); lp.type = "bandpass"; lp.frequency.value = 650; lp.Q.value = 0.6;
+    var g = AC.createGain(); g.gain.value = 0.0001; g.gain.exponentialRampToValueAtTime(0.09, AC.currentTime + 2);
+    var lfo = AC.createOscillator(), lg = AC.createGain(); lfo.frequency.value = 0.13; lg.gain.value = 0.025; lfo.connect(lg); lg.connect(g.gain);
+    src.connect(lp); lp.connect(g); out(g, 0, 0.5);
+    src.start(); lfo.start();
+    AMB = { src: src, g: g, lfo: lfo };
+  }
+  function stopAmbient() {
+    if (!AMB) return;
+    var a = AMB; AMB = null;
+    try { a.g.gain.cancelScheduledValues(AC.currentTime); a.g.gain.setValueAtTime(a.g.gain.value, AC.currentTime); a.g.gain.exponentialRampToValueAtTime(0.0001, AC.currentTime + 1.2); a.src.stop(AC.currentTime + 1.3); a.lfo.stop(AC.currentTime + 1.3); } catch (e) {}
+  }
+
+  // Kommentator (Sprachausgabe des Geräts, türkische Stimme wenn vorhanden)
+  function speak(text, opts) {
+    if (!prefs.voice || !window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
+    try {
+      var u = new SpeechSynthesisUtterance(text), vs = speechSynthesis.getVoices() || [];
+      var v = vs.filter(function (x) { return /^tr/i.test(x.lang); })[0];
+      if (v) { u.voice = v; u.lang = v.lang; } else u.lang = "tr-TR";
+      u.rate = (opts && opts.rate) || 1.05; u.pitch = (opts && opts.pitch) || 1.2; u.volume = 1;
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+  function unlockVoice() {
+    if (!prefs.voice || !window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
+    try { var u = new SpeechSynthesisUtterance(" "); u.volume = 0; speechSynthesis.speak(u); } catch (e) {}
+  }
+
+  // Eigener Torjubel (Datei vom Gerät, wird nur hier gespeichert)
+  function idb(mode, fn) {
+    try {
+      var req = indexedDB.open("fener-sim", 1);
+      req.onupgradeneeded = function () { req.result.createObjectStore("files"); };
+      req.onsuccess = function () { try { var tx = req.result.transaction("files", mode); fn(tx.objectStore("files"), tx); } catch (e) {} };
+    } catch (e) {}
+  }
+  function loadCustom(cb) {
+    idb("readonly", function (st) {
+      var r = st.get("goal");
+      r.onsuccess = function () {
+        if (!r.result || !AC) { CUSTOM = null; if (cb) cb(); return; }
+        try {
+          AC.decodeAudioData(r.result.slice(0), function (buf) { CUSTOM = buf; if (cb) cb(); }, function () { CUSTOM = null; if (cb) cb(); });
+        } catch (e) { CUSTOM = null; if (cb) cb(); }
+      };
+    });
+  }
+  function playCustom(at) {
+    if (!CUSTOM) return false;
+    var src = AC.createBufferSource(); src.buffer = CUSTOM;
+    var g = AC.createGain(); g.gain.value = 0.95; src.connect(g); out(g, 0, 0.15);
+    src.start(AC.currentTime + (at || 0), 0); src.stop(AC.currentTime + (at || 0) + Math.min(CUSTOM.duration, 20));
+    return true;
+  }
+
+  // ---------- Die Momente ----------
+  function goalSound(fb, scorer, preview) {
     if (fb) {
-      crowd(3.2, 900, 0.5); crowd(2.6, 2200, 0.18);
-      [0, 0.35, 0.7].forEach(function (s) { tone(233, s, 0.3, "sawtooth", 0.08); tone(311, s, 0.3, "sawtooth", 0.06); });
+      if (!playCustom(0)) {
+        crowdVoice(0, 6.5, 0.85, "ah", -0.5, { attack: 0.25 });
+        crowdVoice(0.05, 6.2, 0.75, "ah", 0.5, { attack: 0.3, from: 1.02, to: 0.96 });
+        crowdVoice(0.15, 5.5, 0.45, "eh", 0, { attack: 0.4 });
+        [0.4, 1.1, 1.9, 2.6].forEach(function (x, k) { airhorn(x, 0.55, 0.22, k % 2 ? 311 : 233); });
+        clapPattern(4.2, [0, 0.42, 0.84, 1.05, 1.26], 3, 0.9);
+        crowdVoice(4.0, 5.5, 0.3, "oh", 0, { attack: 0.6 });
+      }
+      setTimeout(function () { speak("Gooool! Gol! Gol! " + (scorer ? scorer + "! " : "") + "Fenerbahçe!", { rate: 1.1, pitch: 1.3 }); }, preview ? 300 : 500);
       if (navigator.vibrate) navigator.vibrate([120, 60, 120, 60, 240]);
-    } else crowd(1.2, 350, 0.18);
+    } else {
+      crowdVoice(0, 2.6, 0.3, "uh", 0, { attack: 0.15, from: 1.05, to: 0.8 });
+      whistles(0.6, 18, 0.05);
+    }
   }
+  function sfxGoal(fb, scorer) { if (soundOk()) goalSound(fb, scorer ? lastName(scorer) : null); }
+  function sfxChance() { if (soundOk()) crowdVoice(0, 1.8, 0.35, "oh", 0, { attack: 0.35, from: 0.9, to: 1.1 }); }
   function sfxWhistle(n) {
     if (!soundOk()) return;
-    for (var i = 0; i < n; i++) tone(2900, i * 0.35, i === n - 1 ? 0.55 : 0.22, "sine", 0.12);
+    for (var i = 0; i < n; i++) refWhistle(i * 0.42, i === n - 1 ? 0.75 : 0.28, 0.12);
+    if (n === 1) startAmbient();
+    if (n === 3) stopAmbient();
   }
 
   // =====================================================================
@@ -1007,6 +1188,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     $("form").value = f; $("form-val").textContent = f;
     $("ko").checked = !!prefs.ko;
   }
+  function toast(t) { var el = $("snd-info"); if (el) { el.textContent = t; el.style.color = "var(--yellow)"; } }
   function setSeg(id, attr, val) {
     var bs = $(id).querySelectorAll("button");
     for (var i = 0; i < bs.length; i++) bs[i].setAttribute("aria-pressed", bs[i].dataset[attr] === val ? "true" : "false");
@@ -1301,7 +1483,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
         M.goalMins.push({ m: M.minute, h: M.half, side: "fb" });
         M.momentum = Math.min(1, M.momentum + 0.4);
         addEvent(minLabel(), IC.ball, "Elfmeter für Fenerbahçe! <b>" + esc(taker.n) + "</b> verwandelt sicher. <b>" + scoreLine() + "</b>", "goal-fb big");
-        flash(); sfxGoal(true);
+        flash(); sfxGoal(true, taker.n);
       } else addEvent(minLabel(), IC.dot, "Elfmeter für Fenerbahçe – aber " + esc(lastName(taker.n)) + " scheitert!", "big");
     } else {
       if (scored) {
@@ -1350,9 +1532,9 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
         M.momentum = Math.min(1, M.momentum + 0.4);
         var tpl = M.derby && rnd() < 0.7 ? pick(FB_DERBY_GOAL) : pick(FB_GOAL);
         addEvent(minLabel(), IC.ball, fill(tpl, { s: esc(shooter.n), t: esc(M.opp.n) }) + (assist ? " Vorlage: " + esc(lastName(assist.n)) + "." : "") + " <b>" + scoreLine() + "</b>", "goal-fb big");
-        flash(); sfxGoal(true);
+        flash(); sfxGoal(true, shooter.n);
       } else if (big) {
-        shooter.rating += 0.1;
+        shooter.rating += 0.1; sfxChance();
         addEvent(minLabel(), IC.dot, fill(pick(SAVE_FB), { s: esc(lastName(shooter.n)) }), "big");
       } else if (rnd() < 0.35) {
         addEvent(minLabel(), IC.dot, fill(pick(MISS_FB), { s: esc(lastName(shooter.n)) }));
@@ -1378,6 +1560,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
         flash(); sfxGoal(false);
       } else if (big && onTarget) {
         var k = fbPlayers().filter(function (p) { return p.pos === "TW"; })[0]; if (k) k.rating += 0.4;
+        sfxChance();
         addEvent(minLabel(), IC.dot, fill(pick(SAVE_OP), { t: esc(M.opp.n), k: esc(keeper()) }), "big");
       } else if (rnd() < 0.25) {
         addEvent(minLabel(), IC.dot, fill(pick(MISS_OP), { t: esc(M.opp.n), d: esc(defender()) }));
@@ -1463,7 +1646,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     clearInterval(timer); timer = null;
     M.minute = 90 + M.added2;
     addEvent("90+" + M.added2 + "'", IC.wh, "Abpfiff. Endstand " + scoreLine() + ".");
-    sfxWhistle(3);
+    sfxWhistle(3); stopAmbient();
     if (M.agg) {
       var fbT = M.fb.g + M.agg[0], opT = M.op.g + M.agg[1];
       addEvent("Ges.", IC.wh, "Gesamtergebnis nach Hin- und Rückspiel: Fenerbahçe " + fbT + ":" + opT + " " + esc(M.opp.n) + ".");
@@ -1589,7 +1772,8 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
 
   function startLive(cfg) {
     clearInterval(timer);
-    audio();
+    if (audio() && CUSTOM === null) loadCustom(renderCustomInfo);
+    unlockVoice();
     cfg.live = true;
     M = newMatch(cfg);
     liveActive = true;
@@ -1640,8 +1824,8 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
   $("kickoff").addEventListener("click", function () { startLive(quickCfg()); });
   $("pause").addEventListener("click", function () {
     if (M.done) return;
-    if (timer) { clearInterval(timer); timer = null; this.textContent = "Weiter"; }
-    else { run(); this.textContent = "Pause"; }
+    if (timer) { clearInterval(timer); timer = null; this.textContent = "Weiter"; stopAmbient(); }
+    else { run(); this.textContent = "Pause"; if (soundOk() && M.minute > 0) startAmbient(); }
   });
   $("faster").addEventListener("click", function () {
     if (M.done) return;
@@ -1658,13 +1842,47 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     M.speed = s;
   });
   function renderSoundBtn() { $("sound").textContent = prefs.sound ? "Ton an" : "Ton aus"; $("sound").setAttribute("aria-pressed", prefs.sound ? "true" : "false"); }
-  $("sound").addEventListener("click", function () { prefs.sound = !prefs.sound; savePrefs(); renderSoundBtn(); if (prefs.sound) audio(); });
+  $("sound").addEventListener("click", function () { prefs.sound = !prefs.sound; savePrefs(); renderSoundBtn(); if (prefs.sound) { audio(); if (soundOk() && timer && M.minute > 0) startAmbient(); } else stopAmbient(); });
+  if (prefs.voice === undefined) prefs.voice = true;
+  function renderVoice() { setSeg("voice", "v", prefs.voice ? "1" : "0"); }
+  $("voice").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b) return;
+    prefs.voice = b.dataset.v === "1"; savePrefs(); renderVoice(); unlockVoice();
+  });
+  function renderCustomInfo() { $("snd-del").hidden = !CUSTOM; $("snd-pick").textContent = CUSTOM ? "Anderen Torjubel wählen" : "Eigenen Torjubel wählen"; }
+  $("snd-test").addEventListener("click", function () {
+    if (!audio()) { toast("Ton wird auf diesem Gerät nicht unterstützt"); return; }
+    unlockVoice();
+    var go = function () { goalSound(true, "Kerem", true); };
+    if (CUSTOM === null) loadCustom(function () { renderCustomInfo(); go(); }); else go();
+  });
+  $("snd-pick").addEventListener("click", function () { audio(); $("snd-file").click(); });
+  $("snd-file").addEventListener("change", function () {
+    var f = this.files && this.files[0]; this.value = "";
+    if (!f) return;
+    if (f.size > 8 * 1024 * 1024) { toast("Datei zu groß (max. 8 MB)"); return; }
+    var fr = new FileReader();
+    fr.onload = function () {
+      var data = fr.result;
+      if (!audio()) return;
+      AC.decodeAudioData(data.slice(0), function (buf) {
+        CUSTOM = buf;
+        idb("readwrite", function (st) { st.put(data, "goal"); });
+        renderCustomInfo(); toast("Eigener Torjubel gespeichert");
+      }, function () { toast("Diese Datei kann nicht abgespielt werden"); });
+    };
+    fr.readAsArrayBuffer(f);
+  });
+  $("snd-del").addEventListener("click", function () {
+    CUSTOM = null; idb("readwrite", function (st) { st.delete("goal"); });
+    renderCustomInfo(); toast("Eigener Torjubel gelöscht");
+  });
   $("again").addEventListener("click", function () {
     if (prefs.venue === "home") prefs.venue = "away"; else if (prefs.venue === "away") prefs.venue = "home";
     savePrefs(); refreshSetup(); startLive(quickCfg());
   });
-  $("new").addEventListener("click", function () { liveActive = false; refreshSetup(); showTab("play"); });
-  $("back-season").addEventListener("click", function () { liveActive = false; showTab("season"); });
+  $("new").addEventListener("click", function () { liveActive = false; stopAmbient(); refreshSetup(); showTab("play"); });
+  $("back-season").addEventListener("click", function () { liveActive = false; stopAmbient(); showTab("season"); });
 
   // =====================================================================
   // SAISON 2026/27
@@ -2928,6 +3146,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
   FORM = S.form || computeForm(TABLE_START.map(function (t) { return { n: t.n, p: t.p, gd: t.gf !== null ? t.gf - t.ga : t.gd }; }));
   if (!S.form) { S.form = FORM; saveSeason(); }
   renderSoundBtn();
+  renderVoice();
   refreshSetup();
   showTab("season");
   // Echten Stand nur laden, wenn nötig (nach einem Fener-Spiel oder 1× pro Tag)
