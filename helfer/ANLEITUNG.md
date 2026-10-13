@@ -70,5 +70,8 @@ Fertig! Ab jetzt bekommst du bei jedem Fener-Spiel Push-Nachrichten, auch wenn d
 - **Keine Spiele nach ein paar Minuten**: Schritt 5c prüfen (Cron). Unter **Logs** im Worker siehst du Fehlermeldungen.
 - **Test-Nachricht kommt nicht an**: Ist der Kanalname in ntfy und in `NTFY_TOPIC` exakt gleich? Mitteilungen für ntfy erlaubt?
 
+## Alternative: automatisch einrichten lassen
+Mit `helfer/deploy.sh` richtet ein Befehl alles ein (Datenbank, Worker, Cron, geheime Werte). Dafür braucht es die Umgebungsvariablen `CLOUDFLARE_API_TOKEN` (Rechte: Workers Scripts bearbeiten, D1 bearbeiten), `CLOUDFLARE_ACCOUNT_ID`, `API_FOOTBALL_KEY` und `NTFY_TOPIC`. Mit denselben Variablen spielt das Skript später auch Updates des Helfers ein.
+
 ## Updates
 Die Fener-App selbst aktualisiert sich automatisch. Den Helfer-Code musst du nur neu einfügen (Schritt 4.3 bis 4.5), wenn Claude ausdrücklich sagt, dass sich der Helfer geändert hat.
