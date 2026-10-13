@@ -444,25 +444,6 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
         <button class="ghost" type="button" id="sound" aria-pressed="true">Ton an</button>
       </div>
 
-      <section class="panel" id="coach">
-        <p class="label">Trainer · du entscheidest</p>
-        <p class="hint" style="margin:0 0 8px">Gewechselt wird nur, wenn du es machst. Verletzte Spieler werden automatisch ersetzt.</p>
-        <div class="seg" id="live-tac">
-          <button type="button" data-t="def" aria-pressed="false">Defensiv</button>
-          <button type="button" data-t="bal" aria-pressed="true">Ausgewogen</button>
-          <button type="button" data-t="off" aria-pressed="false">Offensiv</button>
-        </div>
-        <button class="ghost" type="button" id="sub-open" style="margin-top:10px">Spieler wechseln</button>
-        <div id="sub-panel" hidden style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
-          <p class="hint" style="margin:0">Das Spiel ist pausiert, solange du wechselst.</p>
-          <label class="hint" for="sub-off">Raus</label>
-          <select id="sub-off" class="sel"></select>
-          <label class="hint" for="sub-on">Rein</label>
-          <select id="sub-on" class="sel"></select>
-          <label class="toggle" for="sub-auto"><input type="checkbox" id="sub-auto"><span>Ab jetzt automatisch wechseln<small>Aus: Nur du wechselst. Verletzte werden trotzdem ersetzt.</small></span></label>
-          <div class="btn-row" style="margin:0"><button class="ghost" type="button" id="sub-cancel">Schließen</button><button class="cta" type="button" id="sub-do" style="font-size:18px;padding:10px">Einwechseln</button></div>
-        </div>
-      </section>
 
       <div class="panel result" id="result" hidden>
         <div class="verdict" id="verdict"></div>
@@ -702,7 +683,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
   // DATEN – eingebauter Stand 13.10.2026 (nach dem 7. Spieltag)
   // Mit Hintergrund-Helfer wird das automatisch durch den echten Stand ersetzt.
   // =====================================================================
-  var APP_VERSION = "18 (14.10.2026)";
+  var APP_VERSION = "19 (14.10.2026)";
   var FB_NAME = "Fenerbahçe";
   var FB_RATING = 84;
   var FB_STADIUM = "Chobani Stadyumu";
@@ -1136,7 +1117,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
       op: { r: cfg.opp.r + (cfg.venue === "away" ? homeAdv : 0), g: 0, shots: 0, sot: 0, xg: 0, corners: 0, fouls: 0, y: 0, red: 0, poss: 0, scorers: [] },
       onPitch: (cfg.xi || squad.xi).map(function (p) { return { no: p.no, pos: p.pos, n: p.n, r: p.r || 76, rating: 6.3 + rnd() * 0.4, booked: false, off: false }; }),
       bench: (cfg.bench || squad.bench).map(function (p) { return { no: p.no, pos: p.pos, n: p.n, r: p.r || 76, rating: 6.4, booked: false, off: false }; }),
-      cardLog: [], injLog: [], autoSub: !(cfg.live && prefs.speed > 0), // live wechselst nur du, im Hintergrund wechselt der Trainer
+      cardLog: [], injLog: [], autoSub: true, // der Trainer wechselt automatisch
       mult: 1,
       subs: 0, minute: 0, half: 1,
       added1: 1 + Math.floor(rnd() * 4), added2: 2 + Math.floor(rnd() * 5),
@@ -1483,7 +1464,6 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     mom.style.background = v >= 0 ? "var(--yellow)" : "var(--opp)";
 
     $("conf-wrap").hidden = !M.conf;
-    if ($("sub-panel").hidden) renderCoach();
     if (M.conf) {
       $("conf").innerHTML = M.conf.map(function (c) {
         return '<li class="' + (c.hit ? "hit" : "") + '"><span>' + esc(c.h) + "</span><b>" + c.ch + ":" + c.ca + "</b><span>" + esc(c.a) + "</span></li>";
@@ -1507,44 +1487,6 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
       return '<div class="stat"><span class="v">' + r[1] + '</span><div class="mid"><span class="name">' + r[0] + '</span><div class="split"><i style="width:' + pa + '%"></i><i style="width:' + (100 - pa) + '%"></i></div></div><span class="v">' + r[2] + "</span></div>";
     }).join("");
   }
-
-  // ---------- Trainer: Taktik und Wechsel während des Spiels ----------
-  var subWasRunning = false;
-  function renderCoach() {
-    var show = M && M.live && !M.done && M.speed > 0;
-    $("coach").hidden = !show;
-    if (!show) { $("sub-panel").hidden = true; return; }
-    setSeg("live-tac", "t", M.tacKey);
-    var left = 5 - M.subs;
-    $("sub-open").textContent = left > 0 ? "Spieler wechseln (noch " + left + ")" : "Keine Wechsel mehr";
-    $("sub-open").disabled = left <= 0;
-  }
-  document.addEventListener("click", function (e) {
-    var b = e.target.closest("#live-tac button"); if (!b || !M || M.done) return;
-    if (b.dataset.t === M.tacKey) return;
-    M.tacKey = b.dataset.t; M.tac = TACTICS[M.tacKey];
-    addEvent(minLabel(), IC.dot, "Fener stellt um: <b>" + { def: "defensiv", bal: "ausgewogen", off: "volle Offensive" }[M.tacKey] + "</b>.", "big");
-    renderCoach();
-  });
-  $("sub-open").addEventListener("click", function () {
-    if (!M || M.done || M.subs >= 5) return;
-    subWasRunning = !!timer; clearInterval(timer); timer = null; $("pause").textContent = "Weiter";
-    var outs = fbPlayers(), ins = M.bench.filter(function (p) { return !p.used; });
-    $("sub-off").innerHTML = outs.map(function (p, i) { return '<option value="' + M.onPitch.indexOf(p) + '">' + esc(p.pos + " · " + p.n + " · Note " + Math.min(10, p.rating).toFixed(1) + (p.booked ? " · 🟨" : "")) + "</option>"; }).join("");
-    $("sub-on").innerHTML = ins.map(function (p) { return '<option value="' + M.bench.indexOf(p) + '">' + esc(p.pos + " · " + p.n + " (" + p.r + ")") + "</option>"; }).join("");
-    $("sub-auto").checked = M.autoSub;
-    $("sub-panel").hidden = false;
-    $("sub-do").disabled = !ins.length;
-  });
-  function closeSub() { $("sub-panel").hidden = true; if (subWasRunning && M && !M.done) { run(); $("pause").textContent = "Pause"; } renderCoach(); }
-  $("sub-cancel").addEventListener("click", function () { M.autoSub = $("sub-auto").checked; closeSub(); });
-  $("sub-do").addEventListener("click", function () {
-    var off = M.onPitch[+$("sub-off").value], on = M.bench[+$("sub-on").value];
-    if (!off || !on || M.subs >= 5) return;
-    M.autoSub = $("sub-auto").checked;
-    doSub(off, on, on.pos, true);
-    render(); closeSub();
-  });
 
   function startLive(cfg) {
     clearInterval(timer);
