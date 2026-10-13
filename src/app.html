@@ -172,6 +172,67 @@ nav.tabs button { background: none; border: 0; padding: 10px 0 12px; font-size: 
 nav.tabs button svg { width: 22px; height: 22px; }
 nav.tabs button[aria-current="true"] { color: var(--yellow); }
 
+nav.tabs { grid-template-columns: repeat(4, 1fr); }
+
+/* Saison */
+.season-head { display: flex; flex-direction: column; gap: 12px; }
+.kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.kpi { background: var(--navy-2); border: 1px solid var(--line); border-radius: 12px; padding: 10px; min-width: 0; }
+.kpi small { display: block; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.kpi b { display: block; font-family: var(--font-display); font-weight: 800; font-size: 22px; line-height: 1.15; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi b.long { font-size: 17px; line-height: 1.5; }
+.kpi span { display: block; color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.next { background: #050c20; border: 1px solid var(--yellow); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.next .meta { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.next .vs { font-family: var(--font-display); font-weight: 800; font-size: 26px; line-height: 1.1; text-transform: uppercase; overflow-wrap: anywhere; }
+.next .vs em { font-style: normal; color: var(--yellow); }
+.next .note { color: var(--muted); font-size: 13px; margin: 0; }
+.next-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.next-btns .cta { font-size: 18px; padding: 12px; }
+.badge { display: inline-block; font-size: 10.5px; font-weight: 800; letter-spacing: .06em; padding: 2px 6px; border-radius: 5px; text-transform: uppercase; vertical-align: 1px; }
+.badge.SL { background: var(--navy-3); color: var(--fg); }
+.badge.CL { background: #e8ecff; color: #0b1838; }
+.badge.CUP { background: #b3261e; color: #fff; }
+.fixtures { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.fixtures li { display: grid; grid-template-columns: 5.2ch 1fr auto; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--navy-3); }
+.fixtures li:last-child { border-bottom: 0; }
+.fixtures .dt { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; }
+.fixtures .op { min-width: 0; }
+.fixtures .op b { font-weight: 600; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fixtures .op small { color: var(--muted); font-size: 12px; }
+.fixtures .rs { font-family: var(--font-display); font-weight: 800; font-size: 19px; font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 6px; }
+.fixtures .rs i { width: 8px; height: 8px; border-radius: 50%; }
+.fixtures .rs i.w { background: var(--win); } .fixtures .rs i.d { background: var(--draw); } .fixtures .rs i.l { background: var(--loss); }
+.fixtures li.is-next { background: rgba(255,211,26,.08); margin: 0 -8px; padding-left: 8px; padding-right: 8px; border-radius: 8px; }
+.fixtures .open { color: var(--muted); font-size: 13px; font-weight: 600; }
+.real { color: var(--muted); font-size: 10.5px; font-weight: 700; letter-spacing: .06em; }
+.tbl-wrap { overflow-x: auto; }
+table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.tbl th { font-size: 11px; color: var(--muted); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; text-align: right; padding: 6px 4px; }
+.tbl th:nth-child(2) { text-align: left; }
+.tbl td { padding: 7px 4px; border-top: 1px solid var(--navy-3); text-align: right; }
+.tbl td:first-child { width: 2.2ch; color: var(--muted); font-weight: 700; position: relative; padding-left: 8px; }
+.tbl td:nth-child(2) { text-align: left; white-space: nowrap; max-width: 0; width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.tbl td:last-child { font-family: var(--font-display); font-weight: 800; font-size: 17px; }
+.tbl tr.me td { background: rgba(255,211,26,.12); color: var(--yellow); }
+.tbl td.z::before { content: ""; position: absolute; left: 0; top: 4px; bottom: 4px; width: 3px; border-radius: 2px; }
+.tbl td.z-cl::before { background: #e8ecff; } .tbl td.z-q::before { background: var(--opp); } .tbl td.z-el::before { background: #ff9f1a; } .tbl td.z-ecl::before { background: var(--win); } .tbl td.z-down::before { background: var(--loss); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--muted); font-size: 12px; margin-top: 10px; }
+.legend span::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; vertical-align: 0; background: var(--c); }
+.path { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.path li { display: grid; grid-template-columns: 22px 1fr auto; gap: 10px; align-items: center; }
+.path .st { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; font-size: 12px; font-weight: 800; }
+.path li.ok .st { background: var(--win); border-color: var(--win); color: var(--navy); }
+.path li.out .st { background: var(--loss); border-color: var(--loss); color: var(--navy); }
+.path li.now .st { border-color: var(--yellow); }
+.path b { font-weight: 600; }
+.path small { color: var(--muted); font-size: 12.5px; display: block; }
+.path .agg { font-family: var(--font-display); font-weight: 800; font-size: 18px; font-variant-numeric: tabular-nums; }
+.summary { border: 1px solid var(--yellow); }
+.summary h2 { margin: 0 0 6px; font-family: var(--font-display); font-weight: 800; font-size: 26px; text-transform: uppercase; color: var(--yellow); text-wrap: balance; }
+.summary p { margin: 4px 0 0; }
+.src { color: var(--muted); font-size: 12px; margin: 0; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
@@ -180,7 +241,7 @@ nav.tabs button[aria-current="true"] { color: var(--yellow); }
 <div class="app">
   <main id="main">
 
-    <!-- SETUP -->
+    <!-- EINZELSPIEL: SETUP -->
     <div class="view" id="v-setup">
       <header class="brand">
         <svg class="crest" viewBox="0 0 40 40" aria-hidden="true">
@@ -191,7 +252,7 @@ nav.tabs button[aria-current="true"] { color: var(--yellow); }
         </svg>
         <div>
           <h1>Fener <span>Simulator</span></h1>
-          <p>Fenerbahçe-Spiele live simulieren</p>
+          <p>Freundschaftsspiel gegen jeden Gegner</p>
         </div>
       </header>
 
@@ -205,7 +266,7 @@ nav.tabs button[aria-current="true"] { color: var(--yellow); }
       </section>
 
       <section>
-        <p class="label">Gegner · Süper Lig</p>
+        <p class="label">Gegner · Süper Lig 2026/27</p>
         <div class="opps" id="opps-league"></div>
       </section>
 
@@ -215,8 +276,8 @@ nav.tabs button[aria-current="true"] { color: var(--yellow); }
       </section>
 
       <section>
-        <div class="row"><p class="label">Form von Fenerbahçe</p><span class="form-val" id="form-val">82</span></div>
-        <input type="range" id="form" min="70" max="94" value="82" aria-label="Stärke von Fenerbahçe">
+        <div class="row"><p class="label">Form von Fenerbahçe</p><span class="form-val" id="form-val">84</span></div>
+        <input type="range" id="form" min="70" max="94" value="84" aria-label="Stärke von Fenerbahçe">
       </section>
 
       <section>
@@ -261,9 +322,12 @@ nav.tabs button[aria-current="true"] { color: var(--yellow); }
         <div class="verdict" id="verdict"></div>
         <p id="scorers"></p>
         <p class="motm" id="motm"></p>
-        <div class="btn-row">
+        <div class="btn-row" id="res-quick">
           <button class="ghost" type="button" id="again">Rückspiel</button>
           <button class="cta" type="button" id="new" style="font-size:18px;padding:12px">Neues Spiel</button>
+        </div>
+        <div class="btn-row" id="res-season" hidden style="grid-template-columns:1fr">
+          <button class="cta" type="button" id="back-season" style="font-size:18px;padding:12px">Zurück zur Saison</button>
         </div>
       </div>
 
@@ -284,11 +348,59 @@ nav.tabs button[aria-current="true"] { color: var(--yellow); }
       </section>
     </div>
 
+    <!-- SAISON -->
+    <div class="view" id="v-season" hidden>
+      <header class="season-head">
+        <div class="brand">
+          <svg class="crest" viewBox="0 0 40 40" aria-hidden="true">
+            <circle cx="20" cy="20" r="19" fill="#ffd31a"/>
+            <circle cx="20" cy="20" r="15.5" fill="#0b1838"/>
+            <path d="M20 4.5 A15.5 15.5 0 0 1 20 35.5 Z" fill="#ffd31a" opacity=".9"/>
+            <path d="M14 13h9v3h-6v3h5v3h-5v6h-3z" fill="#fff"/>
+          </svg>
+          <div>
+            <h1>Saison <span>2026/27</span></h1>
+            <p id="season-sub">Start beim echten Stand</p>
+          </div>
+        </div>
+        <div class="kpis" id="kpis"></div>
+      </header>
+
+      <div class="panel summary" id="season-end" hidden></div>
+
+      <div class="next" id="next"></div>
+
+      <button class="ghost" type="button" id="sim-rest">Rest der Saison simulieren</button>
+
+      <div class="seg" id="season-tabs">
+        <button type="button" data-st="fix" aria-pressed="true">Spielplan</button>
+        <button type="button" data-st="tbl" aria-pressed="false">Tabelle</button>
+        <button type="button" data-st="cl" aria-pressed="false">Europa &amp; Pokal</button>
+      </div>
+
+      <section class="panel" id="st-fix"><ul class="fixtures" id="fixtures"></ul></section>
+      <section class="panel" id="st-tbl" hidden>
+        <div class="tbl-wrap"><table class="tbl" id="table"></table></div>
+        <div class="legend">
+          <span style="--c:#e8ecff">Champions League</span><span style="--c:var(--opp)">CL-Quali</span><span style="--c:#ff9f1a">Europa League</span><span style="--c:var(--win)">Conference League</span><span style="--c:var(--loss)">Abstieg</span>
+        </div>
+      </section>
+      <section class="panel" id="st-cl" hidden>
+        <p class="label">Champions League</p>
+        <ul class="path" id="cl-path"></ul>
+        <p class="label" style="margin-top:18px">Türkiye Kupası</p>
+        <ul class="path" id="cup-path"></ul>
+      </section>
+
+      <p class="src" id="season-src"></p>
+      <button class="ghost" type="button" id="reset-season">Saison neu starten (echter Stand)</button>
+    </div>
+
     <!-- KADER -->
     <div class="view" id="v-squad" hidden>
       <header>
         <p class="label">Startelf · 4-2-3-1</p>
-        <p class="hint">Namen antippen und ändern. Wer im Spiel trifft, kommt aus dieser Liste. Stürmer und offensive Mittelfeldspieler treffen am häufigsten.</p>
+        <p class="hint">Stammelf nach Einsätzen 2026/27 (Stand 13.10.2026, zuletzt beim 3:0 in Rize). Namen antippen und ändern. Wer im Spiel trifft, kommt aus dieser Liste. Stürmer und offensive Mittelfeldspieler treffen am häufigsten.</p>
       </header>
       <div class="squad" id="xi"></div>
       <p class="label" style="margin-top:6px">Bank</p>
@@ -300,7 +412,7 @@ nav.tabs button[aria-current="true"] { color: var(--yellow); }
     <div class="view" id="v-history" hidden>
       <div class="record" id="record"></div>
       <section class="panel">
-        <p class="label">Letzte Spiele</p>
+        <p class="label">Letzte simulierte Spiele</p>
         <ul class="hist" id="hist"></ul>
       </section>
       <button class="ghost" type="button" id="clear-hist">Verlauf löschen</button>
@@ -308,7 +420,10 @@ nav.tabs button[aria-current="true"] { color: var(--yellow); }
   </main>
 
   <nav class="tabs" aria-label="Bereiche">
-    <button type="button" data-tab="play" aria-current="true">
+    <button type="button" data-tab="season" aria-current="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Saison
+    </button>
+    <button type="button" data-tab="play" aria-current="false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7l4 3-1.5 4.5h-5L8 10z"/></svg>Spiel
     </button>
     <button type="button" data-tab="squad" aria-current="false">
@@ -324,83 +439,181 @@ nav.tabs button[aria-current="true"] { color: var(--yellow); }
 (function () {
   "use strict";
 
-  // ---------- Daten ----------
+  // =====================================================================
+  // DATEN – Stand 13.10.2026 (nach dem 7. Spieltag der Süper Lig)
+  // =====================================================================
+  var FB_NAME = "Fenerbahçe";
+  var FB_RATING = 84;
+  var FB_STADIUM = "Chobani Stadyumu";
+
+  // Süper Lig 2026/27: Stärke (r) ist eine Einschätzung, Stadion für Auswärtsspiele
   var LEAGUE = [
     { n: "Galatasaray", r: 84, rival: true, st: "RAMS Park" },
     { n: "Beşiktaş", r: 80, rival: true, st: "Tüpraş Stadyumu" },
-    { n: "Trabzonspor", r: 78, rival: true, st: "Papara Park" },
+    { n: "Trabzonspor", r: 79, rival: true, st: "Papara Park" },
+    { n: "Amedspor", r: 74, st: "Diyarbakır Stadyumu" },
     { n: "Başakşehir", r: 75, st: "Başakşehir Fatih Terim" },
-    { n: "Samsunspor", r: 74, st: "Samsun 19 Mayıs" },
-    { n: "Göztepe", r: 73, st: "Gürsel Aksel" },
-    { n: "Kasımpaşa", r: 71, st: "Recep Tayyip Erdoğan Stadı" },
-    { n: "Alanyaspor", r: 71, st: "Alanya Oba" },
-    { n: "Antalyaspor", r: 70, st: "Corendon Airlines Park" },
+    { n: "Samsunspor", r: 73, st: "Samsun 19 Mayıs" },
+    { n: "Alanyaspor", r: 72, st: "Alanya Oba" },
+    { n: "Göztepe", r: 72, st: "Gürsel Aksel" },
+    { n: "Kocaelispor", r: 71, st: "Kocaeli Stadyumu" },
+    { n: "Rizespor", r: 71, st: "Çaykur Didi" },
+    { n: "Kasımpaşa", r: 70, st: "Recep Tayyip Erdoğan Stadı" },
     { n: "Konyaspor", r: 70, st: "Konya Büyükşehir" },
-    { n: "Rizespor", r: 70, st: "Çaykur Didi" },
-    { n: "Gaziantep FK", r: 69, st: "Gaziantep Stadyumu" },
-    { n: "Kocaelispor", r: 68, st: "Kocaeli Stadyumu" },
-    { n: "Eyüpspor", r: 68, st: "Recep Tayyip Erdoğan Stadı" },
-    { n: "Kayserispor", r: 68, st: "RHG Enertürk Enerji" },
-    { n: "Gençlerbirliği", r: 67, st: "Eryaman Stadyumu" },
-    { n: "Karagümrük", r: 67, st: "Atatürk Olimpiyat" }
+    { n: "Gaziantep FK", r: 70, st: "Gaziantep Stadyumu" },
+    { n: "Çorum FK", r: 69, st: "Çorum Şehir Stadyumu" },
+    { n: "Gençlerbirliği", r: 68, st: "Eryaman Stadyumu" },
+    { n: "Erzurumspor", r: 68, st: "Kazım Karabekir" },
+    { n: "Eyüpspor", r: 67, st: "Recep Tayyip Erdoğan Stadı" }
   ];
+
+  // Tabelle nach dem 7. Spieltag. gf/ga = null: Tore unbekannt, Tordifferenz (gd) geschätzt.
+  var TABLE_START = [
+    { n: "Galatasaray", p: 7, pts: 16, gf: 11, ga: 5 },
+    { n: "Beşiktaş", p: 7, pts: 15, gf: 16, ga: 8 },
+    { n: "Amedspor", p: 7, pts: 14, gf: 17, ga: 9 },
+    { n: FB_NAME, p: 7, pts: 13, gf: 19, ga: 6 },
+    { n: "Trabzonspor", p: 7, pts: 13, gf: 16, ga: 5 },
+    { n: "Alanyaspor", p: 7, pts: 12, gf: 8, ga: 6 },
+    { n: "Kocaelispor", p: 7, pts: 12, gf: 8, ga: 6 },
+    { n: "Çorum FK", p: 7, pts: 10, gf: 16, ga: 12 },
+    { n: "Kasımpaşa", p: 7, pts: 10, gf: 8, ga: 8 },
+    { n: "Rizespor", p: 7, pts: 10, gf: 7, ga: 9 },
+    { n: "Başakşehir", p: 7, pts: 8, gf: null, ga: null, gd: 0 },
+    { n: "Gaziantep FK", p: 7, pts: 8, gf: null, ga: null, gd: -1 },
+    { n: "Gençlerbirliği", p: 7, pts: 8, gf: null, ga: null, gd: -8 },
+    { n: "Erzurumspor", p: 7, pts: 8, gf: 3, ga: 11 },
+    { n: "Konyaspor", p: 7, pts: 5, gf: null, ga: null, gd: -6 },
+    { n: "Samsunspor", p: 7, pts: 4, gf: null, ga: null, gd: -6 },
+    { n: "Göztepe", p: 6, pts: 3, gf: null, ga: null, gd: -7 },
+    { n: "Eyüpspor", p: 7, pts: 3, gf: null, ga: null, gd: -15 }
+  ];
+
+  // Hinrunde von Fenerbahçe (H = Heim, A = Auswärts). Rückrunde = gespiegelt.
+  var FB_FIRST_HALF = [
+    { w: 1, d: "2026-08-15", o: "Gençlerbirliği", v: "A", res: [1, 2] },
+    { w: 2, d: "2026-08-22", o: "Konyaspor", v: "H", res: [4, 2] },
+    { w: 3, d: "2026-08-30", o: "Samsunspor", v: "A", res: [2, 0] },
+    { w: 4, d: "2026-09-05", o: "Beşiktaş", v: "H", res: [1, 2] },
+    { w: 5, d: "2026-09-14", o: "Gaziantep FK", v: "A", res: [0, 0] },
+    { w: 6, d: "2026-09-20", o: "Eyüpspor", v: "H", res: [8, 0] },
+    { w: 7, d: "2026-10-10", o: "Rizespor", v: "A", res: [3, 0] },
+    { w: 8, d: "2026-10-17", o: "Alanyaspor", v: "H" },
+    { w: 9, d: "2026-10-24", o: "Galatasaray", v: "A" },
+    { w: 10, d: "2026-10-31", o: "Göztepe", v: "H" },
+    { w: 11, d: "2026-11-08", o: "Çorum FK", v: "A" },
+    { w: 12, d: "2026-11-21", o: "Kocaelispor", v: "A" },
+    { w: 13, d: "2026-11-29", o: "Erzurumspor", v: "H" },
+    { w: 14, d: "2026-12-05", o: "Başakşehir", v: "A" },
+    { w: 15, d: "2026-12-13", o: "Trabzonspor", v: "H" },
+    { w: 16, d: "2026-12-18", o: "Kasımpaşa", v: "A" },
+    { w: 17, d: "2027-01-17", o: "Amedspor", v: "H" }
+  ];
+
+  // Champions League – Ligaphase 2026/27 (Auslosung 27.08.2026)
+  var CL_LEAGUE = [
+    { d: "2026-09-10", o: "AS Rom", r: 82, v: "H", res: [1, 1], st: "" },
+    { d: "2026-10-14", o: "Aston Villa", r: 83, v: "A", st: "Villa Park" },
+    { d: "2026-10-20", o: "Slavia Prag", r: 76, v: "H", st: "" },
+    { d: "2026-11-04", o: "Liverpool", r: 89, v: "H", st: "" },
+    { d: "2026-11-25", o: "Schachtar Donezk", r: 77, v: "A", st: "Arena Lwiw" },
+    { d: "2026-12-09", o: "LASK", r: 72, v: "A", st: "Raiffeisen Arena" },
+    { d: "2027-01-20", o: "Villarreal", r: 82, v: "H", st: "" },
+    { d: "2027-01-27", o: "Atlético Madrid", r: 86, v: "A", st: "Riyadh Air Metropolitano" }
+  ];
+  // Übrige Teilnehmer der Ligaphase, nur zur Berechnung der Platzierung (Stärken geschätzt)
+  var CL_FIELD = [89, 86, 82, 83, 82, 77, 76, 72, 91, 90, 89, 89, 89, 89, 87, 86, 85, 84, 84, 84, 84, 82, 81, 82, 81, 81, 79, 79, 77, 77, 77, 75, 76, 75, 73];
+  var CL_KO_POOLS = {
+    playoff: [{ n: "Benfica", r: 82 }, { n: "FC Porto", r: 81 }, { n: "PSV", r: 81 }, { n: "Marseille", r: 81 }, { n: "Sporting", r: 82 }, { n: "Club Brügge", r: 79 }, { n: "Leverkusen", r: 84 }, { n: "Juventus", r: 84 }],
+    r16: [{ n: "Bayern", r: 90 }, { n: "Arsenal", r: 89 }, { n: "Barcelona", r: 89 }, { n: "Paris SG", r: 89 }, { n: "Inter", r: 87 }, { n: "Man City", r: 89 }, { n: "Chelsea", r: 86 }, { n: "Napoli", r: 85 }, { n: "Dortmund", r: 84 }],
+    qf: [{ n: "Real Madrid", r: 91 }, { n: "Bayern", r: 90 }, { n: "Arsenal", r: 89 }, { n: "Barcelona", r: 89 }, { n: "Paris SG", r: 89 }, { n: "Man City", r: 89 }, { n: "Inter", r: 87 }],
+    sf: [{ n: "Real Madrid", r: 91 }, { n: "Bayern", r: 90 }, { n: "Arsenal", r: 89 }, { n: "Barcelona", r: 89 }, { n: "Paris SG", r: 89 }, { n: "Liverpool", r: 89 }],
+    final: [{ n: "Real Madrid", r: 91 }, { n: "Bayern", r: 90 }, { n: "Arsenal", r: 89 }, { n: "Paris SG", r: 89 }, { n: "Liverpool", r: 89 }]
+  };
+  var CL_STAGES = {
+    playoff: { name: "Play-offs", d: ["2027-02-16", "2027-02-23"] },
+    r16: { name: "Achtelfinale", d: ["2027-03-09", "2027-03-16"] },
+    qf: { name: "Viertelfinale", d: ["2027-04-06", "2027-04-13"] },
+    sf: { name: "Halbfinale", d: ["2027-04-27", "2027-05-04"] },
+    final: { name: "Finale", d: ["2027-05-29"] }
+  };
+  var CL_NEXT = { playoff: "r16", r16: "qf", qf: "sf", sf: "final" };
+
+  // Türkiye Kupası (vereinfacht: K.-o.-Runden ab Achtelfinale, Gegner ausgelost)
+  var CUP_STAGES = [
+    { k: "r16", name: "Achtelfinale", d: "2027-02-04" },
+    { k: "qf", name: "Viertelfinale", d: "2027-03-04" },
+    { k: "sf", name: "Halbfinale", d: "2027-04-22" },
+    { k: "final", name: "Finale", d: "2027-05-20" }
+  ];
+
   var EUROPE = [
     { n: "Real Madrid", r: 91, st: "Santiago Bernabéu" },
-    { n: "Man City", r: 90, st: "Etihad Stadium" },
     { n: "Bayern", r: 90, st: "Allianz Arena" },
-    { n: "Barcelona", r: 89, st: "Spotify Camp Nou" },
     { n: "Liverpool", r: 89, st: "Anfield" },
-    { n: "Inter", r: 87, st: "San Siro" },
-    { n: "Dortmund", r: 84, st: "Signal Iduna Park" },
-    { n: "Benfica", r: 82, st: "Estádio da Luz" },
-    { n: "Porto", r: 81, st: "Estádio do Dragão" },
-    { n: "Feyenoord", r: 79, st: "De Kuip" },
-    { n: "Ajax", r: 78, st: "Johan Cruijff ArenA" },
-    { n: "Olympiakos", r: 77, st: "Karaiskakis" }
+    { n: "Barcelona", r: 89, st: "Spotify Camp Nou" },
+    { n: "Arsenal", r: 89, st: "Emirates Stadium" },
+    { n: "Man City", r: 89, st: "Etihad Stadium" },
+    { n: "Atlético Madrid", r: 86, st: "Riyadh Air Metropolitano" },
+    { n: "Aston Villa", r: 83, st: "Villa Park" },
+    { n: "AS Rom", r: 82, st: "Stadio Olimpico" },
+    { n: "Villarreal", r: 82, st: "Estadio de la Cerámica" },
+    { n: "Schachtar Donezk", r: 77, st: "Arena Lwiw" },
+    { n: "Slavia Prag", r: 76, st: "Fortuna Arena" },
+    { n: "LASK", r: 72, st: "Raiffeisen Arena" }
   ];
-  // Standardkader (Stand der Erstellung – im Tab "Kader" anpassbar)
+
+  // Kader 2026/27 – Stammelf nach Einsätzen, Bank aus dem Spieltagskader
   var DEFAULT_SQUAD = {
     xi: [
       { no: 31, pos: "TW", n: "Ederson" },
       { no: 27, pos: "RV", n: "Nélson Semedo" },
       { no: 37, pos: "IV", n: "Milan Škriniar" },
-      { no: 4,  pos: "IV", n: "Çağlar Söyüncü" },
+      { no: 15, pos: "IV", n: "Nathan Aké" },
       { no: 3,  pos: "LV", n: "Archie Brown" },
-      { no: 11, pos: "ZDM", n: "Edson Álvarez" },
-      { no: 35, pos: "ZDM", n: "Fred" },
-      { no: 21, pos: "RA", n: "Marco Asensio" },
-      { no: 94, pos: "ZOM", n: "Anderson Talisca" },
+      { no: 91, pos: "ZDM", n: "N'Golo Kanté" },
+      { no: 6,  pos: "ZDM", n: "Mattéo Guendouzi" },
+      { no: 11, pos: "RA", n: "Mason Greenwood" },
+      { no: 10, pos: "ZOM", n: "Marco Asensio" },
       { no: 7,  pos: "LA", n: "Kerem Aktürkoğlu" },
-      { no: 19, pos: "ST", n: "Youssef En-Nesyri" }
+      { no: 19, pos: "ST", n: "Vedat Muriqi" }
     ],
     bench: [
-      { no: 1,  pos: "TW", n: "Tarık Çetin" },
-      { no: 16, pos: "RV", n: "Mert Müldür" },
+      { no: 34, pos: "TW", n: "Mert Günok" },
+      { no: 22, pos: "LV", n: "Levent Mercan" },
       { no: 24, pos: "IV", n: "Jayden Oosterwolde" },
+      { no: 21, pos: "IV", n: "Kojo Oppong" },
       { no: 5,  pos: "ZM", n: "İsmail Yüksek" },
+      { no: 8,  pos: "ZM", n: "Mert Hakan Yandaş" },
       { no: 17, pos: "ZOM", n: "İrfan Can Kahveci" },
       { no: 70, pos: "RA", n: "Oğuz Aydın" },
       { no: 45, pos: "LA", n: "Dorgeles Nene" },
-      { no: 9,  pos: "ST", n: "Jhon Durán" }
+      { no: 9,  pos: "ST", n: "Romelu Lukaku" }
     ]
   };
   var POS_WEIGHT = { TW: 0, RV: 0.35, LV: 0.35, IV: 0.3, ZDM: 0.6, ZM: 0.9, RA: 2.1, LA: 2.1, ZOM: 2.2, ST: 3.6 };
   var ASSIST_WEIGHT = { TW: 0.05, RV: 1, LV: 1, IV: 0.3, ZDM: 0.8, ZM: 1.3, RA: 2, LA: 2, ZOM: 2.6, ST: 1.2 };
 
-  // ---------- Speicher (optional) ----------
+  // =====================================================================
+  // Speicher (optional, nur auf diesem Gerät)
+  // =====================================================================
   function load(key, fallback) {
     try { var v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; }
   }
   function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {} }
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
 
-  var squad = load("fb.squad", null) || JSON.parse(JSON.stringify(DEFAULT_SQUAD));
+  var squad = load("fb.squad.v2", null) || clone(DEFAULT_SQUAD);
   var history = load("fb.history", []);
-  var prefs = load("fb.prefs", { venue: "home", opp: "Galatasaray", form: 82, ko: false, speed: 250 });
+  var prefs = load("fb.prefs.v2", { venue: "home", opp: "Galatasaray", form: FB_RATING, ko: false, speed: 250 });
 
-  // ---------- Hilfen ----------
+  // =====================================================================
+  // Hilfen
+  // =====================================================================
   var $ = function (id) { return document.getElementById(id); };
   function rnd() { return Math.random(); }
   function pick(arr) { return arr[Math.floor(rnd() * arr.length)]; }
+  function shuffle(a) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(rnd() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
   function weighted(list, wf) {
     var total = 0, i;
     for (i = 0; i < list.length; i++) total += wf(list[i]);
@@ -410,13 +623,27 @@ nav.tabs button[aria-current="true"] { color: var(--yellow); }
   }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   function lastName(n) { var p = n.trim().split(/\s+/); return p.length > 1 ? p.slice(1).join(" ") : p[0]; }
-  function findOpp(name) {
+  function findTeam(name) {
     var all = LEAGUE.concat(EUROPE);
     for (var i = 0; i < all.length; i++) if (all[i].n === name) return all[i];
-    return LEAGUE[0];
+    return null;
+  }
+  function fmtDate(iso) { var p = iso.split("-"); return p[2] + "." + p[1] + "."; }
+  function fmtDateLong(iso) {
+    var d = new Date(iso + "T12:00:00");
+    return d.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" });
+  }
+  function addDays(iso, n) { var d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
+  function poisson(l) { var L = Math.exp(-l), k = 0, p = 1; do { k++; p *= rnd(); } while (p > L); return k - 1; }
+  // Schnelles Ergebnis ohne Ticker (für Spiele ohne Fenerbahçe)
+  function quickScore(rH, rA, adv) {
+    var d = (rH - rA + adv) / 25;
+    return [poisson(1.35 * Math.exp(d)), poisson(1.35 * Math.exp(-d))];
   }
 
-  // ---------- Setup-UI ----------
+  // =====================================================================
+  // Einzelspiel: Setup
+  // =====================================================================
   function renderOpps(el, list) {
     el.innerHTML = list.map(function (o) {
       return '<button type="button" class="opp' + (o.rival ? " rival" : "") + '" data-opp="' + esc(o.n) + '" aria-pressed="' + (prefs.opp === o.n) + '"><b>' + esc(o.n) + "</b><small>" + o.r + "</small></button>";
@@ -436,32 +663,42 @@ nav.tabs button[aria-current="true"] { color: var(--yellow); }
   }
   document.addEventListener("click", function (e) {
     var o = e.target.closest(".opp");
-    if (o) { prefs.opp = o.dataset.opp; save("fb.prefs", prefs); refreshSetup(); return; }
+    if (o) { prefs.opp = o.dataset.opp; save("fb.prefs.v2", prefs); refreshSetup(); return; }
     var v = e.target.closest("#venue button");
-    if (v) { prefs.venue = v.dataset.v; save("fb.prefs", prefs); setSeg("venue", "v", prefs.venue); return; }
+    if (v) { prefs.venue = v.dataset.v; save("fb.prefs.v2", prefs); setSeg("venue", "v", prefs.venue); return; }
     var s = e.target.closest("#speed button");
-    if (s) { prefs.speed = +s.dataset.s; save("fb.prefs", prefs); setSeg("speed", "s", String(prefs.speed)); return; }
+    if (s) { prefs.speed = +s.dataset.s; save("fb.prefs.v2", prefs); setSeg("speed", "s", String(prefs.speed)); return; }
+    var st = e.target.closest("#season-tabs button");
+    if (st) { seasonTab = st.dataset.st; renderSeason(); return; }
     var t = e.target.closest("nav.tabs button");
     if (t) showTab(t.dataset.tab);
   });
-  $("form").addEventListener("input", function () { prefs.form = +this.value; $("form-val").textContent = prefs.form; save("fb.prefs", prefs); });
-  $("ko").addEventListener("change", function () { prefs.ko = this.checked; save("fb.prefs", prefs); });
+  $("form").addEventListener("input", function () { prefs.form = +this.value; $("form-val").textContent = prefs.form; save("fb.prefs.v2", prefs); });
+  $("ko").addEventListener("change", function () { prefs.ko = this.checked; save("fb.prefs.v2", prefs); });
 
-  // ---------- Tabs ----------
-  var liveActive = false;
+  // =====================================================================
+  // Tabs
+  // =====================================================================
+  var liveActive = false, currentTab = "season";
   function showTab(tab) {
+    currentTab = tab;
     var bs = document.querySelectorAll("nav.tabs button");
     for (var i = 0; i < bs.length; i++) bs[i].setAttribute("aria-current", bs[i].dataset.tab === tab ? "true" : "false");
-    $("v-setup").hidden = !(tab === "play" && !liveActive);
-    $("v-live").hidden = !(tab === "play" && liveActive);
+    var liveFor = liveActive && M && (M.season ? "season" : "play");
+    $("v-setup").hidden = !(tab === "play" && liveFor !== "play");
+    $("v-live").hidden = liveFor !== tab;
+    $("v-season").hidden = !(tab === "season" && liveFor !== "season");
     $("v-squad").hidden = tab !== "squad";
     $("v-history").hidden = tab !== "history";
     if (tab === "squad") renderSquad();
     if (tab === "history") renderHistory();
+    if (tab === "season" && liveFor !== "season") renderSeason();
     $("main").scrollTop = 0;
   }
 
-  // ---------- Kader ----------
+  // =====================================================================
+  // Kader
+  // =====================================================================
   function renderSquad() {
     function rows(list, key) {
       return list.map(function (p, i) {
@@ -475,14 +712,16 @@ nav.tabs button[aria-current="true"] { color: var(--yellow); }
     var t = e.target;
     if (t.dataset && t.dataset.k) {
       var name = t.value.trim();
-      if (name) { squad[t.dataset.k][+t.dataset.i].n = name; save("fb.squad", squad); }
+      if (name) { squad[t.dataset.k][+t.dataset.i].n = name; save("fb.squad.v2", squad); }
     }
   });
   $("reset-squad").addEventListener("click", function () {
-    squad = JSON.parse(JSON.stringify(DEFAULT_SQUAD)); save("fb.squad", squad); renderSquad();
+    squad = clone(DEFAULT_SQUAD); save("fb.squad.v2", squad); renderSquad();
   });
 
-  // ---------- Verlauf ----------
+  // =====================================================================
+  // Verlauf
+  // =====================================================================
   function renderHistory() {
     var w = 0, d = 0, l = 0;
     history.forEach(function (h) { if (h.res === "w") w++; else if (h.res === "d") d++; else l++; });
@@ -492,7 +731,7 @@ nav.tabs button[aria-current="true"] { color: var(--yellow); }
       '<div><b>' + d + '</b><small>Remis</small></div>' +
       '<div class="l"><b>' + l + '</b><small>Niederl.</small></div>';
     if (!history.length) {
-      $("hist").innerHTML = '<li class="empty" style="display:block">Noch keine Spiele. Starte im Tab „Spiel“ dein erstes Match.</li>';
+      $("hist").innerHTML = '<li class="empty" style="display:block">Noch keine Spiele. Simuliere im Tab „Saison“ oder „Spiel“ dein erstes Match.</li>';
       return;
     }
     $("hist").innerHTML = history.slice(0, 50).map(function (h) {
@@ -501,46 +740,47 @@ nav.tabs button[aria-current="true"] { color: var(--yellow); }
     }).join("");
   }
   $("clear-hist").addEventListener("click", function () {
-    if (this.dataset.armed) { history = []; save("fb.history", history); renderHistory(); this.textContent = "Verlauf löschen"; delete this.dataset.armed; }
-    else { this.dataset.armed = "1"; this.textContent = "Wirklich löschen? Nochmal tippen"; var b = this; setTimeout(function () { if (b.dataset.armed) { b.textContent = "Verlauf löschen"; delete b.dataset.armed; } }, 3000); }
+    var b = this;
+    clearTimeout(b._t);
+    if (b.dataset.armed) { history = []; save("fb.history", history); renderHistory(); b.textContent = "Verlauf löschen"; delete b.dataset.armed; }
+    else { b.dataset.armed = "1"; b.textContent = "Wirklich löschen? Nochmal tippen"; b._t = setTimeout(function () { b.textContent = "Verlauf löschen"; delete b.dataset.armed; }, 3000); }
   });
+  function pushHistory(h) { history.unshift(h); history = history.slice(0, 100); save("fb.history", history); }
 
-  // ---------- Simulation ----------
+  // =====================================================================
+  // Match-Engine (läuft live mit Ticker oder im Hintergrund)
+  // =====================================================================
   var M = null, timer = null;
 
-  function newMatch() {
-    var opp = findOpp(prefs.opp);
-    var fbHome = prefs.venue !== "away";
-    var homeAdv = prefs.venue === "neutral" ? 0 : 3;
-    var isEurope = EUROPE.indexOf(opp) >= 0;
+  // cfg: { opp:{n,r,st}, venue:'home'|'away'|'neutral', fbRating, comp, ko, agg:[fb,op]|null, live, season }
+  function newMatch(cfg) {
+    var homeAdv = cfg.venue === "neutral" ? 0 : 3;
     return {
-      opp: opp,
-      fbHome: fbHome,
-      neutral: prefs.venue === "neutral",
-      ko: prefs.ko,
-      comp: prefs.ko ? (isEurope ? "Europapokal · K.-o." : "Türkiye Kupası") : (isEurope ? "Europapokal" : "Süper Lig"),
-      fb: { r: prefs.form + (prefs.venue === "home" ? homeAdv : 0), g: 0, shots: 0, sot: 0, xg: 0, corners: 0, fouls: 0, y: 0, red: 0, poss: 0, scorers: [] },
-      op: { r: opp.r + (prefs.venue === "away" ? homeAdv : 0), g: 0, shots: 0, sot: 0, xg: 0, corners: 0, fouls: 0, y: 0, red: 0, poss: 0, scorers: [] },
+      cfg: cfg,
+      live: cfg.live,
+      season: cfg.season || null,
+      opp: cfg.opp,
+      fbHome: cfg.venue !== "away",
+      neutral: cfg.venue === "neutral",
+      ko: cfg.ko,
+      agg: cfg.agg || null,
+      comp: cfg.comp,
+      fb: { r: cfg.fbRating + (cfg.venue === "home" ? homeAdv : 0), g: 0, shots: 0, sot: 0, xg: 0, corners: 0, fouls: 0, y: 0, red: 0, poss: 0, scorers: [] },
+      op: { r: cfg.opp.r + (cfg.venue === "away" ? homeAdv : 0), g: 0, shots: 0, sot: 0, xg: 0, corners: 0, fouls: 0, y: 0, red: 0, poss: 0, scorers: [] },
       onPitch: squad.xi.map(function (p) { return { no: p.no, pos: p.pos, n: p.n, rating: 6.3 + rnd() * 0.4, booked: false, off: false }; }),
       bench: squad.bench.map(function (p) { return { no: p.no, pos: p.pos, n: p.n, rating: 6.4, booked: false, off: false }; }),
-      subs: 0,
-      minute: 0,
-      half: 1,
+      subs: 0, minute: 0, half: 1,
       added1: 1 + Math.floor(rnd() * 4),
       added2: 2 + Math.floor(rnd() * 5),
-      momentum: 0,
-      done: false,
-      pens: null,
+      momentum: 0, done: false, pens: null,
       speed: prefs.speed
     };
   }
 
-  function eff(side) {
-    var t = M[side];
-    return t.r - t.red * 6;
-  }
+  function eff(side) { return M[side].r - M[side].red * 6; }
 
   function addEvent(min, icon, html, cls) {
+    if (!M.live) return;
     var li = document.createElement("li");
     if (cls) li.className = cls;
     li.innerHTML = '<span class="m">' + min + '</span><span class="ic">' + icon + '</span><span class="tx">' + html + "</span>";
@@ -555,7 +795,6 @@ nav.tabs button[aria-current="true"] { color: var(--yellow); }
     if (M.half === 2 && m > 90) return "90+" + (m - 90) + "'";
     return m + "'";
   }
-
   function fbPlayers() { return M.onPitch.filter(function (p) { return !p.off; }); }
 
   var FB_GOAL = [
@@ -584,8 +823,7 @@ nav.tabs button[aria-current="true"] { color: var(--yellow); }
     M.minute++;
     var m = M.minute;
 
-    // Anpfiff / Halbzeit / Abpfiff
-    if (M.half === 1 && m === 1) addEvent("1'", IC.wh, "Anpfiff" + (M.fbHome && !M.neutral ? " in Kadıköy. Das Stadion ist voll." : "."));
+    if (M.half === 1 && m === 1) addEvent("1'", IC.wh, "Anpfiff" + (M.fbHome && !M.neutral ? " im " + FB_STADIUM + ". Das Stadion ist voll." : "."));
     if (M.half === 1 && m > 45 + M.added1) {
       addEvent("HZ", IC.wh, "Halbzeit. " + scoreLine() + ".");
       M.half = 2; M.minute = 45; render(); return;
@@ -594,27 +832,25 @@ nav.tabs button[aria-current="true"] { color: var(--yellow); }
     if (m === 46 && M.half === 2) addEvent("46'", IC.wh, "Weiter geht's, die zweite Halbzeit läuft.");
 
     var fbE = eff("fb"), opE = eff("op");
-    var d = (fbE - opE) / 10; // ~ -1 .. +1.5
+    var d = (fbE - opE) / 10;
     var pFb = Math.max(0.28, Math.min(0.72, 0.5 + d * 0.09 + M.momentum * 0.06));
     var fbHasBall = rnd() < pFb;
     M[fbHasBall ? "fb" : "op"].poss++;
-
-    // Momentum langsam driften lassen
     M.momentum = Math.max(-1, Math.min(1, M.momentum * 0.9 + (fbHasBall ? 0.05 : -0.05) + (rnd() - 0.5) * 0.1));
 
-    // Spätes Drängen, wenn man zurückliegt
+    // Spätes Drängen, wenn man zurückliegt (im Rückspiel zählt das Gesamtergebnis)
     var urgency = 0;
     if (m > 70) {
-      if (M.fb.g < M.op.g) urgency = fbHasBall ? 0.06 : 0;
-      if (M.op.g < M.fb.g) urgency = fbHasBall ? 0 : 0.06;
+      var fbT = M.fb.g + (M.agg ? M.agg[0] : 0), opT = M.op.g + (M.agg ? M.agg[1] : 0);
+      if (fbT < opT) urgency = fbHasBall ? 0.06 : 0;
+      if (opT < fbT) urgency = fbHasBall ? 0 : 0.06;
     }
 
     if (rnd() < 0.24 + urgency) shot(fbHasBall ? "fb" : "op", d);
-    else if (rnd() < 0.09) corner(fbHasBall ? "fb" : "op");
+    else if (rnd() < 0.09) M[fbHasBall ? "fb" : "op"].corners++;
 
     if (rnd() < 0.032) card(rnd() < 0.5 ? "fb" : "op");
 
-    // Wechsel
     if (M.half === 2 && M.subs < 5 && (m === 61 || m === 68 || m === 76 || m === 83) && rnd() < 0.8) sub();
 
     render();
@@ -667,8 +903,6 @@ nav.tabs button[aria-current="true"] { color: var(--yellow); }
     }
   }
 
-  function corner(side) { M[side].corners++; }
-
   function card(side) {
     var t = M[side];
     t.fouls++;
@@ -703,8 +937,7 @@ nav.tabs button[aria-current="true"] { color: var(--yellow); }
     var off = weighted(outs, function (p) { return (p.booked ? 2 : 1) * Math.max(0.2, 8 - p.rating); });
     off.off = true; off.subbed = true;
     on.used = true;
-    var newP = { no: on.no, pos: off.pos, n: on.n, rating: 6.5, booked: false, off: false, subbed: true };
-    M.onPitch.push(newP);
+    M.onPitch.push({ no: on.no, pos: off.pos, n: on.n, rating: 6.5, booked: false, off: false, subbed: true });
     M.subs++;
     addEvent(minLabel(), IC.sub, "Wechsel: " + esc(lastName(on.n)) + " kommt für " + esc(lastName(off.n)) + ".");
   }
@@ -719,64 +952,83 @@ nav.tabs button[aria-current="true"] { color: var(--yellow); }
     clearInterval(timer); timer = null;
     M.minute = 90 + M.added2;
     addEvent("90+" + M.added2 + "'", IC.wh, "Abpfiff. Endstand " + scoreLine() + ".");
-    if (M.ko && M.fb.g === M.op.g) penalties();
+    if (M.agg) {
+      var fbT = M.fb.g + M.agg[0], opT = M.op.g + M.agg[1];
+      addEvent("Ges.", IC.wh, "Gesamtergebnis nach Hin- und Rückspiel: Fenerbahçe " + fbT + ":" + opT + " " + esc(M.opp.n) + ".");
+      if (M.ko && fbT === opT) penalties();
+    } else if (M.ko && M.fb.g === M.op.g) penalties();
     finish();
   }
 
-  function penalties() {
-    var takers = fbPlayers().filter(function (p) { return p.pos !== "TW"; }).sort(function (a, b) { return (POS_WEIGHT[b.pos] || 0) - (POS_WEIGHT[a.pos] || 0); });
+  function penaltyShootout(fbE, opE) {
     var fbP = 0, opP = 0, round = 0, log = [];
-    var fbConv = 0.76 + (eff("fb") - eff("op")) * 0.003, opConv = 0.76 - (eff("fb") - eff("op")) * 0.003;
+    var fbConv = 0.76 + (fbE - opE) * 0.003, opConv = 0.76 - (fbE - opE) * 0.003;
+    var takers = M ? fbPlayers().filter(function (p) { return p.pos !== "TW"; }).sort(function (a, b) { return (POS_WEIGHT[b.pos] || 0) - (POS_WEIGHT[a.pos] || 0); }) : [];
     while (true) {
       round++;
-      var tk = takers[(round - 1) % takers.length];
       var a = rnd() < fbConv, b = rnd() < opConv;
       if (a) fbP++; if (b) opP++;
-      log.push(esc(lastName(tk.n)) + (a ? " ✓" : " ✗"));
-      if (round <= 5) {
-        var left = 5 - round;
-        if (fbP > opP + left || opP > fbP + left) break;
-      } else if (fbP !== opP) break;
+      if (takers.length) log.push(esc(lastName(takers[(round - 1) % takers.length].n)) + (a ? " ✓" : " ✗"));
+      if (round <= 5) { var left = 5 - round; if (fbP > opP + left || opP > fbP + left) break; }
+      else if (fbP !== opP) break;
       if (round > 20) { fbP++; break; }
     }
-    M.pens = { fb: fbP, op: opP };
-    addEvent("i.E.", IC.wh, "Elfmeterschießen: " + log.join(", ") + ". <b>" + (M.fbHome ? fbP + ":" + opP : opP + ":" + fbP) + " i.E.</b>", fbP > opP ? "goal-fb big" : "goal-op big");
+    return { fb: fbP, op: opP, log: log };
+  }
+
+  function penalties() {
+    var r = penaltyShootout(eff("fb"), eff("op"));
+    M.pens = { fb: r.fb, op: r.op };
+    addEvent("i.E.", IC.wh, "Elfmeterschießen: " + r.log.join(", ") + ". <b>" + (M.fbHome ? r.fb + ":" + r.op : r.op + ":" + r.fb) + " i.E.</b>", r.fb > r.op ? "goal-fb big" : "goal-op big");
+  }
+
+  function matchOutcome() {
+    var res = M.fb.g > M.op.g ? "w" : M.fb.g < M.op.g ? "l" : "d";
+    return res;
   }
 
   function finish() {
+    var res = matchOutcome();
+    var tieRes = res;
+    if (M.pens) tieRes = M.pens.fb > M.pens.op ? "w" : "l";
+    var title = M.fbHome ? "Fenerbahçe – " + M.opp.n : M.opp.n + " – Fenerbahçe";
+    pushHistory({
+      res: res,
+      title: title,
+      sub: M.comp + (M.season ? " · " + fmtDate(M.season.fx.d) : "") + (M.fb.scorers.length ? " · " + M.fb.scorers.map(function (s) { return s.replace(/ \d.*$/, ""); }).join(", ") : ""),
+      score: scoreLine() + (M.pens ? " i.E." : "")
+    });
+    var result = { fg: M.fb.g, og: M.op.g, pens: M.pens, scorers: M.fb.scorers.slice() };
+    if (M.season) applyFixtureResult(M.season.fx.id, result);
+
+    if (!M.live) return;
     render();
-    var res = M.fb.g > M.op.g ? "w" : M.fb.g < M.op.g ? "l" : "d";
-    if (M.pens) res = M.pens.fb > M.pens.op ? "w" : "l";
     var v = $("verdict");
-    v.className = "verdict " + res;
+    v.className = "verdict " + tieRes;
     var txt = { w: "Sieg für Fenerbahçe", d: "Unentschieden", l: "Niederlage" }[res];
-    if (M.pens) txt = res === "w" ? "Weiter im Elfmeterschießen" : "Raus im Elfmeterschießen";
-    if (res === "w" && M.fb.g - M.op.g >= 3) txt = "Kantersieg!";
+    if (M.pens) txt = tieRes === "w" ? "Weiter im Elfmeterschießen" : "Raus im Elfmeterschießen";
+    else if (M.agg) {
+      var fbT = M.fb.g + M.agg[0], opT = M.op.g + M.agg[1];
+      txt = fbT > opT ? "Weiter! " + fbT + ":" + opT + " gesamt" : "Ausgeschieden, " + fbT + ":" + opT + " gesamt";
+      v.className = "verdict " + (fbT > opT ? "w" : "l");
+    } else if (res === "w" && M.fb.g - M.op.g >= 3) txt = "Kantersieg!";
     v.textContent = txt;
     $("scorers").textContent = M.fb.scorers.length ? "Tore: " + M.fb.scorers.join(", ") : "Kein Tor für Fenerbahçe";
     var best = M.onPitch.slice().sort(function (a, b) { return b.rating - a.rating; })[0];
     $("motm").textContent = "Spieler des Spiels: " + best.n + " (" + Math.min(10, best.rating).toFixed(1) + ")";
     $("result").hidden = false;
     $("live-controls").hidden = true;
-
-    var title = M.fbHome ? "Fenerbahçe – " + M.opp.n : M.opp.n + " – Fenerbahçe";
-    var d = new Date();
-    history.unshift({
-      res: res,
-      title: title,
-      sub: M.comp + " · " + d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }) + (M.fb.scorers.length ? " · " + M.fb.scorers.map(function (s) { return s.replace(/ \d.*$/, ""); }).join(", ") : ""),
-      score: scoreLine() + (M.pens ? " i.E." : "")
-    });
-    history = history.slice(0, 100);
-    save("fb.history", history);
+    $("res-quick").hidden = !!M.season;
+    $("res-season").hidden = !M.season;
   }
 
-  // ---------- Rendering Live ----------
   function flash() {
+    if (!M.live) return;
     ["g-home", "g-away"].forEach(function (id) { var e = $(id); e.classList.remove("flash"); void e.offsetWidth; e.classList.add("flash"); });
   }
 
   function render() {
+    if (!M.live) return;
     var home = M.fbHome ? M.fb : M.op, away = M.fbHome ? M.op : M.fb;
     $("g-home").textContent = home.g; $("g-away").textContent = away.g;
     $("minute").textContent = M.done ? "Ende" : minLabel();
@@ -786,6 +1038,9 @@ nav.tabs button[aria-current="true"] { color: var(--yellow); }
     if (M.pens) {
       $("pens").hidden = false;
       $("pens").textContent = (M.fbHome ? M.pens.fb + ":" + M.pens.op : M.pens.op + ":" + M.pens.fb) + " im Elfmeterschießen";
+    } else if (M.agg) {
+      $("pens").hidden = false;
+      $("pens").textContent = "Hinspiel " + (M.fbHome ? M.agg[1] + ":" + M.agg[0] : M.agg[0] + ":" + M.agg[1]) + " · Gesamt " + (M.fb.g + M.agg[0]) + ":" + (M.op.g + M.agg[1]) + " für " + (M.fb.g + M.agg[0] >= M.op.g + M.agg[1] ? "Fener" : M.opp.n);
     }
 
     var mom = $("mom"), v = M.momentum;
@@ -804,32 +1059,41 @@ nav.tabs button[aria-current="true"] { color: var(--yellow); }
       ["Platzverweise", M.fb.red, M.op.red]
     ];
     $("stats").innerHTML = rows.map(function (r) {
-      var a = parseFloat(r[1]), b = parseFloat(r[2]), s = a + b || 1;
-      var pa = s ? a / s * 100 : 50;
-      if (a + b === 0) pa = 50;
+      var a = parseFloat(r[1]), b = parseFloat(r[2]);
+      var pa = a + b === 0 ? 50 : a / (a + b) * 100;
       return '<div class="stat"><span class="v">' + r[1] + '</span><div class="mid"><span class="name">' + r[0] + '</span><div class="split"><i style="width:' + pa + '%"></i><i style="width:' + (100 - pa) + '%"></i></div></div><span class="v">' + r[2] + "</span></div>";
     }).join("");
   }
 
-  function startMatch() {
+  function startLive(cfg) {
     clearInterval(timer);
-    M = newMatch();
+    cfg.live = true;
+    M = newMatch(cfg);
     liveActive = true;
     $("ticker").innerHTML = "";
     $("result").hidden = true;
     $("live-controls").hidden = false;
     $("pens").hidden = true;
     $("pause").textContent = "Pause";
-    var homeName = M.fbHome ? "Fenerbahçe" : M.opp.n, awayName = M.fbHome ? M.opp.n : "Fenerbahçe";
-    $("t-home").textContent = homeName; $("t-away").textContent = awayName;
+    $("t-home").textContent = M.fbHome ? FB_NAME : M.opp.n;
+    $("t-away").textContent = M.fbHome ? M.opp.n : FB_NAME;
     $("t-home").className = "team" + (M.fbHome ? " fb" : "");
     $("t-away").className = "team away" + (M.fbHome ? "" : " fb");
     $("comp").textContent = M.comp;
-    $("stadium").textContent = M.neutral ? "Neutraler Platz" : M.fbHome ? "Ülker Stadyumu" : M.opp.st;
-    $("mom-l").textContent = "Fenerbahçe"; $("mom-r").textContent = M.opp.n;
-    showTab("play");
+    $("stadium").textContent = M.neutral ? "Neutraler Platz" : M.fbHome ? FB_STADIUM : (M.opp.st || "Auswärts");
+    $("mom-l").textContent = FB_NAME; $("mom-r").textContent = M.opp.n;
+    showTab(M.season ? "season" : "play");
     render();
     run();
+  }
+
+  // Spiel ohne Ticker komplett durchrechnen
+  function simulateSilently(cfg) {
+    cfg.live = false;
+    var prev = M;
+    M = newMatch(cfg);
+    while (!M.done) step();
+    M = prev;
   }
 
   function run() {
@@ -838,7 +1102,16 @@ nav.tabs button[aria-current="true"] { color: var(--yellow); }
     timer = setInterval(step, M.speed);
   }
 
-  $("kickoff").addEventListener("click", startMatch);
+  function quickCfg() {
+    var opp = findTeam(prefs.opp) || LEAGUE[0];
+    var isEurope = EUROPE.indexOf(opp) >= 0;
+    return {
+      opp: opp, venue: prefs.venue, fbRating: prefs.form, ko: prefs.ko,
+      comp: prefs.ko ? (isEurope ? "Europapokal · K.-o." : "Pokal · K.-o.") : (isEurope ? "Testspiel · Europa" : "Testspiel")
+    };
+  }
+
+  $("kickoff").addEventListener("click", function () { startLive(quickCfg()); });
   $("pause").addEventListener("click", function () {
     if (M.done) return;
     if (timer) { clearInterval(timer); timer = null; this.textContent = "Weiter"; }
@@ -856,10 +1129,379 @@ nav.tabs button[aria-current="true"] { color: var(--yellow); }
   });
   $("again").addEventListener("click", function () {
     if (prefs.venue === "home") prefs.venue = "away"; else if (prefs.venue === "away") prefs.venue = "home";
-    save("fb.prefs", prefs); refreshSetup(); startMatch();
+    save("fb.prefs.v2", prefs); refreshSetup(); startLive(quickCfg());
   });
   $("new").addEventListener("click", function () { liveActive = false; refreshSetup(); showTab("play"); });
+  $("back-season").addEventListener("click", function () { liveActive = false; showTab("season"); });
 
+  // =====================================================================
+  // SAISON 2026/27
+  // =====================================================================
+  var S = null, seasonTab = "fix";
+
+  function teamRating(name) {
+    if (name === FB_NAME) return FB_RATING;
+    var t = findTeam(name); return t ? t.r : 70;
+  }
+
+  function initSeason() {
+    var fixtures = [], id = 0;
+    FB_FIRST_HALF.forEach(function (f) {
+      fixtures.push({ id: ++id, d: f.d, comp: "SL", rd: f.w + ". Spieltag", w: f.w, opp: f.o, r: teamRating(f.o), v: f.v, done: !!f.res, real: !!f.res, fg: f.res ? f.res[0] : null, og: f.res ? f.res[1] : null });
+    });
+    // Rückrunde: gleiche Reihenfolge, Heimrecht getauscht, Termine ca. wöchentlich ab 24.01.2027
+    FB_FIRST_HALF.forEach(function (f, i) {
+      var w = 18 + i;
+      fixtures.push({ id: ++id, d: addDays("2027-01-24", (w - 18) * 7), comp: "SL", rd: w + ". Spieltag", w: w, opp: f.o, r: teamRating(f.o), v: f.v === "H" ? "A" : "H", done: false, real: false, fg: null, og: null, approx: true });
+    });
+    CL_LEAGUE.forEach(function (f, i) {
+      fixtures.push({ id: ++id, d: f.d, comp: "CL", rd: "Ligaphase " + (i + 1) + "/8", stage: "league", opp: f.o, r: f.r, st: f.st, v: f.v, done: !!f.res, real: !!f.res, fg: f.res ? f.res[0] : null, og: f.res ? f.res[1] : null });
+    });
+
+    var table = {};
+    TABLE_START.forEach(function (t) {
+      table[t.n] = { n: t.n, p: t.p, pts: t.pts, gd: t.gf !== null ? t.gf - t.ga : t.gd, gf: t.gf, ga: t.ga };
+    });
+    // Restspiele der anderen Teams (ohne die Spiele gegen Fener)
+    var bg = {};
+    LEAGUE.forEach(function (t) {
+      var vsFbLeft = fixtures.filter(function (f) { return f.comp === "SL" && !f.done && f.opp === t.n; }).length;
+      bg[t.n] = 34 - table[t.n].p - vsFbLeft;
+    });
+
+    S = {
+      v: 1, nextId: id + 1, fixtures: fixtures, table: table, bg: bg,
+      cl: { stage: "league", rank: null, ko: [], out: false, won: false },
+      cup: { stage: 0, out: false, won: false, ko: [] }
+    };
+    addCupFixture();
+    sortFixtures();
+    saveSeason();
+  }
+
+  function sortFixtures() { S.fixtures.sort(function (a, b) { return a.d < b.d ? -1 : a.d > b.d ? 1 : a.id - b.id; }); }
+  function saveSeason() { save("fb.season.v1", S); }
+  function nextFixture() { for (var i = 0; i < S.fixtures.length; i++) if (!S.fixtures[i].done) return S.fixtures[i]; return null; }
+  function getFixture(id) { for (var i = 0; i < S.fixtures.length; i++) if (S.fixtures[i].id === id) return S.fixtures[i]; return null; }
+
+  function addCupFixture() {
+    var st = CUP_STAGES[S.cup.stage];
+    var used = S.cup.ko.map(function (k) { return k.opp; });
+    var pool = LEAGUE.filter(function (t) { return used.indexOf(t.n) < 0; });
+    // Spätere Runden: eher stärkere Gegner
+    var opp = weighted(pool, function (t) { return Math.pow(t.r - 60, S.cup.stage + 1); });
+    var v = st.k === "final" ? "N" : (rnd() < 0.5 ? "H" : "A");
+    S.fixtures.push({ id: S.nextId++, d: st.d, comp: "CUP", rd: st.name, stage: st.k, opp: opp.n, r: opp.r, st: opp.st, v: v, done: false, real: false, fg: null, og: null, ko: true });
+    S.cup.ko.push({ stage: st.k, name: st.name, opp: opp.n });
+  }
+
+  function addClTie(stageKey, seededHomeSecond) {
+    var stg = CL_STAGES[stageKey];
+    var used = S.cl.ko.map(function (k) { return k.opp; });
+    var pool = CL_KO_POOLS[stageKey].filter(function (t) { return used.indexOf(t.n) < 0; });
+    if (!pool.length) pool = CL_KO_POOLS[stageKey];
+    var opp = pick(pool);
+    var tieId = "cl-" + stageKey;
+    if (stg.d.length === 1) {
+      S.fixtures.push({ id: S.nextId++, d: stg.d[0], comp: "CL", rd: stg.name, stage: stageKey, tie: tieId, leg: 0, opp: opp.n, r: opp.r, v: "N", done: false, real: false, fg: null, og: null, ko: true });
+    } else {
+      var firstHome = !seededHomeSecond;
+      S.fixtures.push({ id: S.nextId++, d: stg.d[0], comp: "CL", rd: stg.name + " · Hinspiel", stage: stageKey, tie: tieId, leg: 1, opp: opp.n, r: opp.r, v: firstHome ? "H" : "A", done: false, real: false, fg: null, og: null });
+      S.fixtures.push({ id: S.nextId++, d: stg.d[1], comp: "CL", rd: stg.name + " · Rückspiel", stage: stageKey, tie: tieId, leg: 2, opp: opp.n, r: opp.r, v: firstHome ? "A" : "H", done: false, real: false, fg: null, og: null, ko: true });
+    }
+    S.cl.stage = stageKey;
+    S.cl.ko.push({ stage: stageKey, name: stg.name, opp: opp.n, tie: tieId });
+    sortFixtures();
+  }
+
+  function oppCfg(fx) {
+    var t = findTeam(fx.opp);
+    return { n: fx.opp, r: fx.r, st: fx.st || (t ? t.st : "") };
+  }
+
+  function fixtureCfg(fx) {
+    var comp = fx.comp === "SL" ? "Süper Lig · " + fx.rd : fx.comp === "CL" ? "Champions League · " + fx.rd : "Türkiye Kupası · " + fx.rd;
+    var agg = null;
+    if (fx.leg === 2) {
+      var first = S.fixtures.filter(function (f) { return f.tie === fx.tie && f.leg === 1; })[0];
+      agg = [first.fg, first.og];
+    }
+    return {
+      opp: oppCfg(fx),
+      venue: fx.v === "H" ? "home" : fx.v === "A" ? "away" : "neutral",
+      fbRating: FB_RATING,
+      comp: comp,
+      ko: !!fx.ko,
+      agg: agg,
+      season: { fx: fx }
+    };
+  }
+
+  function addResult(team, gf, ga) {
+    var t = S.table[team];
+    t.p++; t.gd += gf - ga;
+    if (t.gf !== null) { t.gf += gf; t.ga += ga; }
+    t.pts += gf > ga ? 3 : gf === ga ? 1 : 0;
+  }
+
+  // Eine Runde der anderen Süper-Lig-Spiele simulieren
+  function simulateLeagueRound(fbOpp) {
+    var teams = LEAGUE.filter(function (t) { return t.n !== fbOpp && S.bg[t.n] > 0; }).map(function (t) { return t.n; });
+    shuffle(teams);
+    teams.sort(function (a, b) { return S.bg[b] - S.bg[a]; });
+    for (var i = 0; i + 1 < teams.length; i += 2) {
+      var h = teams[i], a = teams[i + 1];
+      if (rnd() < 0.5) { var x = h; h = a; a = x; }
+      var sc = quickScore(teamRating(h), teamRating(a), 3);
+      addResult(h, sc[0], sc[1]); addResult(a, sc[1], sc[0]);
+      S.bg[h]--; S.bg[a]--;
+    }
+  }
+  // Am Saisonende fehlende Spiele gegen einen Durchschnittsgegner auffüllen
+  function flushLeague() {
+    LEAGUE.forEach(function (t) {
+      while (S.bg[t.n] > 0) {
+        var home = rnd() < 0.5;
+        var sc = quickScore(t.r, 71, home ? 3 : -3);
+        addResult(t.n, sc[0], sc[1]);
+        S.bg[t.n]--;
+      }
+    });
+  }
+
+  function applyFixtureResult(id, res) {
+    var fx = getFixture(id);
+    if (!fx || fx.done) return;
+    fx.done = true; fx.fg = res.fg; fx.og = res.og; fx.pens = res.pens || null; fx.scorers = res.scorers || [];
+
+    if (fx.comp === "SL") {
+      addResult(FB_NAME, fx.fg, fx.og);
+      addResult(fx.opp, fx.og, fx.fg);
+      simulateLeagueRound(fx.opp);
+      if (fx.w === 34) flushLeague();
+    } else if (fx.comp === "CL") {
+      if (fx.stage === "league") {
+        var left = S.fixtures.filter(function (f) { return f.comp === "CL" && f.stage === "league" && !f.done; }).length;
+        if (!left) finishClLeague();
+      } else if (fx.ko) {
+        var won;
+        if (fx.leg === 2) {
+          var first = S.fixtures.filter(function (f) { return f.tie === fx.tie && f.leg === 1; })[0];
+          var fbT = first.fg + fx.fg, opT = first.og + fx.og;
+          won = fbT !== opT ? fbT > opT : fx.pens.fb > fx.pens.op;
+        } else {
+          won = fx.fg !== fx.og ? fx.fg > fx.og : fx.pens.fb > fx.pens.op;
+        }
+        var cur = S.cl.ko[S.cl.ko.length - 1]; cur.won = won;
+        if (!won) S.cl.out = true;
+        else if (fx.stage === "final") S.cl.won = true;
+        else addClTie(CL_NEXT[fx.stage], true);
+      }
+    } else if (fx.comp === "CUP") {
+      var w = fx.fg !== fx.og ? fx.fg > fx.og : fx.pens.fb > fx.pens.op;
+      S.cup.ko[S.cup.ko.length - 1].won = w;
+      if (!w) S.cup.out = true;
+      else if (S.cup.stage === CUP_STAGES.length - 1) S.cup.won = true;
+      else { S.cup.stage++; addCupFixture(); sortFixtures(); }
+    }
+    saveSeason();
+  }
+
+  function clRecord() {
+    var r = { p: 0, pts: 0, gf: 0, ga: 0 };
+    S.fixtures.forEach(function (f) {
+      if (f.comp === "CL" && f.stage === "league" && f.done) {
+        r.p++; r.gf += f.fg; r.ga += f.og; r.pts += f.fg > f.og ? 3 : f.fg === f.og ? 1 : 0;
+      }
+    });
+    return r;
+  }
+
+  function finishClLeague() {
+    var me = clRecord();
+    // Die anderen 35 Teams spielen ihre 8 Spiele gegen zufällige Gegner aus dem Feld
+    var field = CL_FIELD.map(function (r) {
+      var pts = 0, gd = 0;
+      for (var i = 0; i < 8; i++) {
+        var o = pick(CL_FIELD.concat([FB_RATING]));
+        var sc = quickScore(r, o, i % 2 ? 3 : -3);
+        pts += sc[0] > sc[1] ? 3 : sc[0] === sc[1] ? 1 : 0; gd += sc[0] - sc[1];
+      }
+      return { pts: pts, gd: gd + rnd() * 0.1 };
+    });
+    var myGd = me.gf - me.ga;
+    var rank = 1 + field.filter(function (t) { return t.pts > me.pts || (t.pts === me.pts && t.gd > myGd); }).length;
+    S.cl.rank = rank;
+    if (rank <= 8) addClTie("r16", true);
+    else if (rank <= 24) addClTie("playoff", rank <= 16);
+    else { S.cl.out = true; S.cl.stage = "league"; }
+  }
+
+  function sortedTable() {
+    return Object.keys(S.table).map(function (k) { return S.table[k]; }).sort(function (a, b) {
+      return b.pts - a.pts || b.gd - a.gd || (b.gf || 0) - (a.gf || 0) || a.n.localeCompare(b.n);
+    });
+  }
+  function fbPos() {
+    var t = sortedTable();
+    for (var i = 0; i < t.length; i++) if (t[i].n === FB_NAME) return i + 1;
+    return 0;
+  }
+
+  function inStage(name) { return name === "Play-offs" ? "in den Play-offs" : "im " + name; }
+  function clStatusText() {
+    if (S.cl.won) return { b: "Sieger", s: "Henkelpott!" };
+    var last = S.cl.ko[S.cl.ko.length - 1];
+    if (S.cl.out) {
+      if (!last) return { b: "Aus", s: "Platz " + S.cl.rank + " Ligaphase" };
+      return { b: "Aus", s: inStage(last.name) };
+    }
+    if (last) return { b: last.name, s: "vs. " + last.opp };
+    var r = clRecord();
+    return { b: r.pts + " Pkt", s: "Ligaphase " + r.p + "/8" };
+  }
+  function cupStatusText() {
+    var last = S.cup.ko[S.cup.ko.length - 1];
+    if (S.cup.won) return { b: "Sieger", s: "Pokal gewonnen" };
+    if (S.cup.out) return { b: "Aus", s: "im " + last.name };
+    return { b: last.name, s: "vs. " + last.opp };
+  }
+
+  function resultClass(f) {
+    if (f.pens) return f.pens.fb > f.pens.op ? "w" : "l";
+    return f.fg > f.og ? "w" : f.fg < f.og ? "l" : "d";
+  }
+  function fxScore(f) {
+    // Immer aus Sicht Heim:Gast
+    var s = f.v === "A" ? f.og + ":" + f.fg : f.fg + ":" + f.og;
+    if (f.pens) s += " i.E.";
+    return s;
+  }
+  function vsText(f) {
+    if (f.v === "H") return "<em>Fenerbahçe</em> – " + esc(f.opp);
+    if (f.v === "A") return esc(f.opp) + " – <em>Fenerbahçe</em>";
+    return "<em>Fenerbahçe</em> – " + esc(f.opp);
+  }
+
+  function renderSeason() {
+    var pos = fbPos(), me = S.table[FB_NAME];
+    var cl = clStatusText(), cup = cupStatusText();
+    $("kpis").innerHTML =
+      '<div class="kpi"><small>Süper Lig</small><b>' + pos + '.</b><span>' + me.pts + " Pkt · " + me.p + ' Sp.</span></div>' +
+      '<div class="kpi"><small>Champions L.</small><b' + (cl.b.length > 7 ? ' class="long"' : '') + '>' + esc(cl.b) + '</b><span>' + esc(cl.s) + '</span></div>' +
+      '<div class="kpi"><small>Pokal</small><b' + (cup.b.length > 7 ? ' class="long"' : '') + '>' + esc(cup.b) + '</b><span>' + esc(cup.s) + '</span></div>';
+
+    var nx = nextFixture();
+    var simulated = S.fixtures.filter(function (f) { return f.done && !f.real; }).length;
+    $("season-sub").textContent = simulated ? simulated + (simulated === 1 ? " Spiel" : " Spiele") + " simuliert" : "Start beim echten Stand vom 13.10.2026";
+
+    if (nx) {
+      var badge = { SL: "Süper Lig", CL: "Champions League", CUP: "Türkiye Kupası" }[nx.comp];
+      var note = "";
+      if (nx.leg === 2) {
+        var first = S.fixtures.filter(function (f) { return f.tie === nx.tie && f.leg === 1; })[0];
+        note = "Hinspiel " + fxScore(first) + ". Bei Gleichstand: Elfmeterschießen.";
+      } else if (nx.ko) note = "K.-o.-Spiel: Bei Unentschieden folgt ein Elfmeterschießen.";
+      else if (nx.approx) note = "Termin der Rückrunde geschätzt.";
+      $("next").hidden = false;
+      $("next").innerHTML =
+        '<div class="meta"><span>Nächstes Spiel · ' + esc(badge) + '</span><span>' + fmtDateLong(nx.d) + '</span></div>' +
+        '<div class="vs">' + vsText(nx) + '</div>' +
+        '<p class="note">' + esc(nx.rd) + (note ? " · " + esc(note) : "") + '</p>' +
+        '<div class="next-btns"><button class="ghost" type="button" id="sim-next">Ergebnis simulieren</button><button class="cta" type="button" id="live-next">Live spielen</button></div>';
+      $("sim-rest").hidden = false;
+    } else {
+      $("next").hidden = true;
+      $("sim-rest").hidden = true;
+    }
+
+    // Saisonbilanz
+    if (!nx) {
+      var clT = S.cl.won ? "Champions-League-Sieger!" : S.cl.ko.length ? "Champions League: Aus " + inStage(S.cl.ko[S.cl.ko.length - 1].name) : "Champions League: Aus in der Ligaphase (Platz " + S.cl.rank + ")";
+      var cupT = S.cup.won ? "Türkiye-Kupası-Sieger!" : "Pokal: Aus im " + S.cup.ko[S.cup.ko.length - 1].name;
+      var title = pos === 1 ? "Şampiyon! Meister 2026/27" : pos + ". Platz in der Süper Lig";
+      if (pos === 1 && S.cl.won && S.cup.won) title = "Das Triple!";
+      $("season-end").hidden = false;
+      $("season-end").innerHTML = "<h2>" + esc(title) + "</h2><p>" + me.pts + " Punkte aus 34 Spielen, Tore " + me.gf + ":" + me.ga + ".</p><p>" + esc(clT) + "</p><p>" + esc(cupT) + "</p>";
+    } else $("season-end").hidden = true;
+
+    setSeg("season-tabs", "st", seasonTab);
+    $("st-fix").hidden = seasonTab !== "fix";
+    $("st-tbl").hidden = seasonTab !== "tbl";
+    $("st-cl").hidden = seasonTab !== "cl";
+
+    if (seasonTab === "fix") {
+      $("fixtures").innerHTML = S.fixtures.map(function (f) {
+        var right = f.done
+          ? '<span class="rs"><i class="' + resultClass(f) + '"></i>' + fxScore(f) + "</span>"
+          : '<span class="open">' + (f.v === "H" ? "Heim" : f.v === "A" ? "Ausw." : "Neutral") + "</span>";
+        return '<li class="' + (nx && f.id === nx.id ? "is-next" : "") + '"><span class="dt">' + fmtDate(f.d) + '</span><span class="op"><b>' + (f.v === "H" ? "vs. " : f.v === "A" ? "@ " : "vs. ") + esc(f.opp) + '</b><small><span class="badge ' + f.comp + '">' + { SL: "Liga", CL: "CL", CUP: "Pokal" }[f.comp] + "</span> " + esc(f.rd) + (f.real ? ' · <span class="real">ECHT</span>' : "") + "</small></span>" + right + "</li>";
+      }).join("");
+    }
+    if (seasonTab === "tbl") {
+      var rows = sortedTable();
+      $("table").innerHTML = "<thead><tr><th>#</th><th>Verein</th><th>Sp</th><th>Diff</th><th>Pkt</th></tr></thead><tbody>" + rows.map(function (t, i) {
+        var p = i + 1, z = p === 1 ? "z-cl" : p === 2 ? "z-q" : p === 3 ? "z-el" : p === 4 ? "z-ecl" : p >= 16 ? "z-down" : "";
+        return '<tr class="' + (t.n === FB_NAME ? "me" : "") + '"><td class="' + (z ? "z " + z : "") + '">' + p + "</td><td>" + esc(t.n) + "</td><td>" + t.p + "</td><td>" + (t.gd > 0 ? "+" : "") + t.gd + "</td><td>" + t.pts + "</td></tr>";
+      }).join("") + "</tbody>";
+    }
+    if (seasonTab === "cl") renderPaths();
+
+    $("season-src").textContent = "Echte Daten bis 13.10.2026: Tabelle nach dem 7. Spieltag, Fener-Ergebnisse, CL-Auslosung. Rückrunde gespiegelt, Termine ab Spieltag 18 geschätzt. Tordifferenz einiger Teams geschätzt. K.-o.-Gegner in CL und Pokal werden zufällig gelost. Spiele ohne Fener werden im Hintergrund berechnet.";
+  }
+
+  function renderPaths() {
+    var r = clRecord();
+    var items = [];
+    var lpDone = r.p === 8;
+    items.push('<li class="' + (lpDone ? (S.cl.rank <= 24 ? "ok" : "out") : "now") + '"><span class="st">' + (lpDone ? (S.cl.rank <= 24 ? "✓" : "✗") : "") + '</span><span><b>Ligaphase</b><small>' + r.p + "/8 Spiele · Tore " + r.gf + ":" + r.ga + (S.cl.rank ? " · Platz " + S.cl.rank + " von 36" : " · Top 8 direkt ins Achtelfinale, 9–24 Play-offs") + '</small></span><span class="agg">' + r.pts + " P</span></li>");
+    S.cl.ko.forEach(function (k) {
+      var legs = S.fixtures.filter(function (f) { return f.tie === k.tie; });
+      var fbT = 0, opT = 0, done = legs.every(function (f) { return f.done; });
+      legs.forEach(function (f) { if (f.done) { fbT += f.fg; opT += f.og; } });
+      var pens = legs.filter(function (f) { return f.pens; })[0];
+      var cls = k.won === true ? "ok" : k.won === false ? "out" : "now";
+      items.push('<li class="' + cls + '"><span class="st">' + (k.won === true ? "✓" : k.won === false ? "✗" : "") + '</span><span><b>' + esc(k.name) + '</b><small>gegen ' + esc(k.opp) + (pens ? " · i.E. " + pens.pens.fb + ":" + pens.pens.op : "") + '</small></span><span class="agg">' + (legs.some(function (f) { return f.done; }) ? fbT + ":" + opT : "–") + "</span></li>");
+    });
+    if (S.cl.won) items.push('<li class="ok"><span class="st">★</span><span><b>Champions-League-Sieger</b></span><span></span></li>');
+    $("cl-path").innerHTML = items.join("");
+
+    $("cup-path").innerHTML = S.cup.ko.map(function (k) {
+      var f = S.fixtures.filter(function (x) { return x.comp === "CUP" && x.stage === k.stage; })[0];
+      var cls = k.won === true ? "ok" : k.won === false ? "out" : "now";
+      return '<li class="' + cls + '"><span class="st">' + (k.won === true ? "✓" : k.won === false ? "✗" : "") + '</span><span><b>' + esc(k.name) + '</b><small>gegen ' + esc(k.opp) + " · " + fmtDate(f.d) + (f.pens ? " · i.E. " + f.pens.fb + ":" + f.pens.op : "") + '</small></span><span class="agg">' + (f.done ? f.fg + ":" + f.og : "–") + "</span></li>";
+    }).join("") + (S.cup.won ? '<li class="ok"><span class="st">★</span><span><b>Pokalsieger</b></span><span></span></li>' : "");
+  }
+
+  document.addEventListener("click", function (e) {
+    if (e.target.closest("#sim-next")) {
+      var nx = nextFixture(); if (!nx) return;
+      simulateSilently(fixtureCfg(nx));
+      renderSeason();
+    } else if (e.target.closest("#live-next")) {
+      var nx2 = nextFixture(); if (!nx2) return;
+      startLive(fixtureCfg(nx2));
+    }
+  });
+  $("sim-rest").addEventListener("click", function () {
+    var guard = 0, nx;
+    while ((nx = nextFixture()) && guard++ < 200) simulateSilently(fixtureCfg(nx));
+    renderSeason();
+    $("main").scrollTop = 0;
+  });
+  $("reset-season").addEventListener("click", function () {
+    var b = this;
+    clearTimeout(b._t);
+    if (b.dataset.armed) { delete b.dataset.armed; b.textContent = "Saison neu starten (echter Stand)"; initSeason(); renderSeason(); $("main").scrollTop = 0; }
+    else { b.dataset.armed = "1"; b.textContent = "Simulierte Spiele verwerfen? Nochmal tippen"; b._t = setTimeout(function () { b.textContent = "Saison neu starten (echter Stand)"; delete b.dataset.armed; }, 3000); }
+  });
+
+  // =====================================================================
+  // Start
+  // =====================================================================
+  S = load("fb.season.v1", null);
+  if (!S || S.v !== 1) initSeason();
   refreshSetup();
+  showTab("season");
 })();
 </script>
