@@ -12,6 +12,17 @@ Eine Fußball-Simulations-App nur für Fenerbahçe-Spiele. Sie besteht aus einer
 - Kader im Tab „Kader“ bearbeiten
 - Verlauf mit Bilanz (wird auf dem Gerät gespeichert)
 
+## Weitere Funktionen
+- **Prognose fürs nächste Spiel**: 1000 Simulationen ergeben die Wahrscheinlichkeiten für Sieg, Remis und Niederlage und das wahrscheinlichste Ergebnis.
+- **Saison-Prognose**: 300 komplette Durchläufe ergeben die Chancen auf Meisterschaft, CL-Runden und Pokal.
+- **Kader**: Spielerstärken, Teamstärke, Spieler tauschen, Ausrichtung defensiv/ausgewogen/offensiv.
+- **Konferenz**: Bei live gespielten Ligaspielen laufen die anderen Spiele des Spieltags mit.
+- **Derby-Modus** gegen Galatasaray, Beşiktaş und Trabzonspor mit eigenen Kommentaren und mehr Karten.
+- **Torjubel mit Ton**, Verletzungen, Spielerstatistik der Saison (Tore, Vorlagen, Spieler des Spiels).
+- **Echte Ergebnisse von Hand eintragen**: Offenes Spiel im Spielplan antippen.
+- **Tippspiel** für die nächsten echten Fener-Spiele.
+- **Mit API-Key**: Echter Stand (Tabelle, Ergebnisse, Termine) wird automatisch geladen, höchstens alle 6 Stunden. Die echte Aufstellung lässt sich als Startelf übernehmen.
+
 ## Aufs iPhone
 1. `index.html` irgendwo hosten, z. B. mit GitHub Pages (Settings → Pages → Branch wählen).
 2. Die Seite in Safari öffnen → Teilen → „Zum Home-Bildschirm“.
