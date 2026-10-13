@@ -454,6 +454,14 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
             <p id="season-sub">Start beim echten Stand</p>
           </div>
         </div>
+        <div class="seg" id="season-mode">
+          <button type="button" data-m="current" aria-pressed="true">Aktueller Stand</button>
+          <button type="button" data-m="start" aria-pressed="false">Ab 1. Spieltag</button>
+        </div>
+        <div class="banner" id="mode-confirm" hidden>
+          <span id="mode-confirm-txt"></span>
+          <div class="btn-row" style="margin:0"><button class="ghost" type="button" id="mode-no">Abbrechen</button><button class="cta" type="button" id="mode-yes" style="font-size:18px;padding:10px">Neu starten</button></div>
+        </div>
         <div class="kpis" id="kpis"></div>
       </header>
 
@@ -481,7 +489,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
       </div>
 
       <section class="panel" id="st-fix">
-        <p class="hint" style="margin-bottom:8px">Ein offenes Spiel antippen, um das echte Ergebnis einzutragen.</p>
+        <p class="hint" style="margin-bottom:8px">Ein offenes Spiel antippen, um ein Ergebnis von Hand einzutragen.</p>
         <ul class="fixtures" id="fixtures"></ul>
       </section>
       <section class="panel" id="st-tbl" hidden>
@@ -1499,10 +1507,10 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
 
   var FINISHED = ["FT", "AET", "PEN"];
   // Echte API-Daten in Spielplan und Tabelle einarbeiten
-  function mergeReal(fixtures) {
+  function mergeReal(fixtures, fresh) {
     if (!REAL || !REAL.fixtures) return null;
     // Ergebnisse nur übernehmen, wenn auch die echte Tabelle da ist (sonst passt beides nicht zusammen)
-    var tableOk = REAL.table && REAL.table.length >= 10;
+    var tableOk = !fresh && REAL.table && REAL.table.length >= 10;
     REAL.fixtures.forEach(function (a) {
       var fbHome = isFb(a.h), v = fbHome ? "H" : "A", oppApi = fbHome ? a.a : a.h;
       var target = null;
@@ -1531,11 +1539,16 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     return table;
   }
 
-  function initSeason() {
+  // mode: "current" = echter aktueller Stand, "start" = alles auf null ab dem 1. Spieltag
+  function initSeason(mode) {
+    mode = mode || (S && S.mode) || "current";
+    var fresh = mode === "start";
     var fixtures = baseFixtures();
-    var realTable = mergeReal(fixtures);
+    if (fresh) fixtures.forEach(function (f) { f.done = false; f.real = false; f.fg = null; f.og = null; });
+    var realTable = mergeReal(fixtures, fresh);
     var table = {};
-    if (realTable) table = realTable;
+    if (fresh) [FB_NAME].concat(LEAGUE.map(function (t) { return t.n; })).forEach(function (n) { table[n] = { n: n, p: 0, pts: 0, gd: 0, gf: 0, ga: 0 }; });
+    else if (realTable) table = realTable;
     else TABLE_START.forEach(function (t) {
       table[t.n] = { n: t.n, p: t.p, pts: t.pts, gd: t.gf !== null ? t.gf - t.ga : t.gd, gf: t.gf, ga: t.ga };
     });
@@ -1548,17 +1561,17 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     });
 
     S = {
-      v: 2, nextId: fixtures.length + 1, fixtures: fixtures, table: table, bg: bg,
+      v: 2, mode: mode, nextId: fixtures.length + 1, fixtures: fixtures, table: table, bg: bg,
       cl: { stage: "league", rank: null, ko: [], out: false, won: false },
       cup: { stage: 0, out: false, won: false, ko: [] },
-      stats: {}, realAt: REAL ? REAL.at : null
+      stats: {}, realAt: REAL && !fresh ? REAL.at : null
     };
     addCupFixture();
     sortFixtures();
     // Von Hand eingetragene echte Ergebnisse übernehmen (chronologisch)
     S.fixtures.slice().forEach(function (f) {
       var m = MANUAL[fxKey(f)];
-      if (m && !f.done) { f.real = true; applyFixtureResult(f.id, { fg: m.fg, og: m.og, pens: m.pens || null }, null); }
+      if (!fresh && m && !f.done) { f.real = true; applyFixtureResult(f.id, { fg: m.fg, og: m.og, pens: m.pens || null }, null); }
     });
     predCache = {}; oddsResult = null;
     saveSeason();
@@ -1865,17 +1878,22 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     var pos = fbPos(), me = S.table[FB_NAME];
     var cl = clStatusText(), cup = cupStatusText();
     $("kpis").innerHTML =
-      '<div class="kpi"><small>Süper Lig</small><b>' + pos + '.</b><span>' + me.pts + " Pkt · " + me.p + ' Sp.</span></div>' +
+      '<div class="kpi"><small>Süper Lig</small><b>' + (me.p ? pos + "." : "–") + '</b><span>' + me.pts + " Pkt · " + me.p + ' Sp.</span></div>' +
       '<div class="kpi"><small>Champions L.</small><b' + (cl.b.length > 7 ? ' class="long"' : '') + '>' + esc(cl.b) + '</b><span>' + esc(cl.s) + '</span></div>' +
       '<div class="kpi"><small>Pokal</small><b' + (cup.b.length > 7 ? ' class="long"' : '') + '>' + esc(cup.b) + '</b><span>' + esc(cup.s) + '</span></div>';
 
     var nx = nextFixture();
     var simulated = S.fixtures.filter(function (f) { return f.done && !f.real; }).length;
     var stand = S.realAt ? "echtem Stand vom " + new Date(S.realAt).toLocaleDateString("de-DE") : "echtem Stand vom 13.10.2026";
-    $("season-sub").textContent = simulated ? simulated + (simulated === 1 ? " Spiel" : " Spiele") + " simuliert" : "Start bei " + stand;
+    var isStart = S.mode === "start";
+    $("season-sub").textContent = (isStart ? "Ab 1. Spieltag · " : "Aktueller Stand · ") + (simulated ? simulated + (simulated === 1 ? " Spiel" : " Spiele") + " simuliert" : isStart ? "alle Teams bei 0 Punkten" : "Start bei " + stand);
+    setSeg("season-mode", "m", S.mode || "current");
+    $("mode-confirm").hidden = !pendingMode;
+    if (pendingMode) $("mode-confirm-txt").textContent = "Saison " + (pendingMode === "start" ? "ab dem 1. Spieltag" : "beim aktuellen echten Stand") + " neu starten? " + (simulated === 1 ? "Dein simuliertes Spiel geht" : "Deine " + simulated + " simulierten Spiele gehen") + " verloren.";
+    $("reset-season").textContent = isStart ? "Saison neu starten (ab 1. Spieltag)" : "Saison neu starten (aktueller Stand)";
 
     // Hinweis, wenn neuere echte Daten vorliegen als die laufende Saison
-    var newer = REAL && REAL.at && REAL.at !== S.realAt;
+    var newer = S.mode !== "start" && REAL && REAL.at && REAL.at !== S.realAt;
     $("real-banner").hidden = !newer;
     if (newer) $("real-banner-txt").textContent = "Neue echte Daten vom " + new Date(REAL.at).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) + " sind da. Deine simulierten Spiele gehen beim Übernehmen verloren.";
 
@@ -1930,7 +1948,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     if (seasonTab === "pl") renderPlayerStats();
     renderOdds();
 
-    $("season-src").textContent = (S.realAt
+    $("season-src").textContent = (S.mode === "start" ? "Modus ab 1. Spieltag: alle Teams starten bei 0, echte Ergebnisse werden ignoriert, nur die Termine sind echt. " : "") + (S.realAt
       ? "Echte Daten von API-Football (Stand " + new Date(S.realAt).toLocaleDateString("de-DE") + "). "
       : "Eingebaute echte Daten bis 13.10.2026. Rückrunde gespiegelt, Termine ab Spieltag 18 geschätzt, einige Tordifferenzen geschätzt. ") +
       "K.-o.-Gegner in CL und Pokal werden zufällig gelost. Spiele ohne Fener werden im Hintergrund berechnet.";
@@ -1945,7 +1963,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
       var editor = "";
       if (!f.done && editId === f.id) {
         var hName = f.v === "A" ? f.opp : "Fenerbahçe", aName = f.v === "A" ? "Fenerbahçe" : f.opp;
-        editor = '<div class="editor"><span class="who">Echtes Ergebnis:</span><label>' + esc(hName) + ' <input type="number" min="0" max="20" id="ed-h" value="0"></label><label><input type="number" min="0" max="20" id="ed-a" value="0"> ' + esc(aName) + "</label>" +
+        editor = '<div class="editor"><span class="who">' + (S.mode === "start" ? "Ergebnis:" : "Echtes Ergebnis:") + '</span><label>' + esc(hName) + ' <input type="number" min="0" max="20" id="ed-h" value="0"></label><label><input type="number" min="0" max="20" id="ed-a" value="0"> ' + esc(aName) + "</label>" +
           (f.ko ? '<label><input type="checkbox" id="ed-pen"> Fener gewinnt i.E. bei Gleichstand</label>' : "") +
           '<button class="ghost" type="button" id="ed-save" data-id="' + f.id + '">Speichern</button><button class="ghost" type="button" id="ed-cancel">Abbrechen</button></div>';
       }
@@ -1966,8 +1984,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
         if (f.leg === 2) { var f1 = firstLeg(f); fbT += f1.fg; opT += f1.og; }
         if (fbT === opT) pens = $("ed-pen").checked ? { fb: 5, op: 4 } : { fb: 4, op: 5 };
       }
-      MANUAL[fxKey(f)] = { fg: fg, og: og, pens: pens }; save("fb.manual.v1", MANUAL);
-      f.real = true;
+      if (S.mode !== "start") { MANUAL[fxKey(f)] = { fg: fg, og: og, pens: pens }; save("fb.manual.v1", MANUAL); f.real = true; }
       applyFixtureResult(f.id, { fg: fg, og: og, pens: pens }, null);
       editId = null; renderSeason();
     }
@@ -2027,9 +2044,24 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     $("main").scrollTop = 0;
   });
   $("reset-season").addEventListener("click", function () {
-    armButton(this, "Saison neu starten (echter Stand)", "Simulierte Spiele verwerfen? Nochmal tippen", function () { initSeason(); renderSeason(); $("main").scrollTop = 0; });
+    var label = this.textContent.indexOf("Nochmal") >= 0 ? (S.mode === "start" ? "Saison neu starten (ab 1. Spieltag)" : "Saison neu starten (aktueller Stand)") : this.textContent;
+    armButton(this, label, "Simulierte Spiele verwerfen? Nochmal tippen", function () { initSeason(); renderSeason(); $("main").scrollTop = 0; });
   });
-  $("real-apply").addEventListener("click", function () { initSeason(); renderSeason(); $("main").scrollTop = 0; });
+  $("real-apply").addEventListener("click", function () { initSeason("current"); renderSeason(); $("main").scrollTop = 0; });
+
+  // ---------- Modus wählen: aktueller Stand oder ab 1. Spieltag ----------
+  var pendingMode = null;
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest("#season-mode button"); if (!b) return;
+    var m = b.dataset.m;
+    if (m === (S.mode || "current")) { pendingMode = null; renderSeason(); return; }
+    var sims = S.fixtures.filter(function (f) { return f.done && !f.real; }).length;
+    if (!sims) { initSeason(m); pendingMode = null; }
+    else pendingMode = m;
+    renderSeason();
+  });
+  $("mode-yes").addEventListener("click", function () { if (pendingMode) initSeason(pendingMode); pendingMode = null; renderSeason(); });
+  $("mode-no").addEventListener("click", function () { pendingMode = null; renderSeason(); });
 
   // =====================================================================
   // ECHTER LIVE-TICKER + ECHTER STAND (API-Football)
@@ -2082,7 +2114,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
       REAL = { at: Date.now(), fixtures: fx, table: table };
       save("fb.real.v1", REAL);
       var sims = S.fixtures.filter(function (f) { return f.done && !f.real; }).length;
-      if (!sims) initSeason(); // nichts simuliert: direkt übernehmen
+      if (!sims && S.mode !== "start") initSeason("current"); // nichts simuliert: direkt übernehmen
       RL.syncMsg = "Echter Stand geladen: " + fx.filter(function (f) { return FINISHED.indexOf(f.st) >= 0; }).length + " gespielte Fener-Spiele, Tabelle mit " + table.length + " Teams." + (sims ? " Im Tab „Saison“ kannst du ihn übernehmen." : " Die Saison startet jetzt von dort.");
     }).catch(function (e) { RL.syncMsg = "Echter Stand: " + friendlyErr(e); })
       .then(function () { RL.syncing = false; if (currentTab === "real") renderReal(); if (currentTab === "season" && !liveActive) renderSeason(); });
@@ -2205,7 +2237,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     })[0] || null;
   }
   function seasonSyncButton(f) {
-    if (FINISHED.indexOf(f.fixture.status.short) < 0) return "";
+    if (FINISHED.indexOf(f.fixture.status.short) < 0 || (S && S.mode === "start")) return "";
     var sx = findSeasonFixture(f);
     if (!sx) return "";
     return '<button class="ghost" type="button" data-sync="' + f.fixture.id + '">Echtes Ergebnis in die Saison übernehmen (' + esc(sx.rd) + ")</button>";

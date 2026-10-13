@@ -3,6 +3,7 @@
 Eine Fußball-Simulations-App nur für Fenerbahçe-Spiele. Sie besteht aus einer einzigen Web-Seite und läuft im Browser, auch auf dem iPhone.
 
 ## Funktionen
+- **Zwei Saison-Modi**: „Aktueller Stand“ (echte Tabelle und Ergebnisse) oder „Ab 1. Spieltag“ (alle Teams bei 0, ganze Saison selbst simulieren).
 - **Saison 2026/27**: startet beim echten Stand vom 13.10.2026 (Tabelle nach dem 7. Spieltag, Fener-Ergebnisse, Champions-League-Auslosung). Spiel für Spiel live oder als Ergebnis simulieren, oder den Rest der Saison auf einmal. Die Tabelle läuft mit, inklusive Champions-League-K.-o.-Runde und Türkiye Kupası.
 - Einzelspiel gegen jeden Süper-Lig-Klub 2026/27 oder europäische Topklubs
 - Heim (Kadıköy), auswärts oder auf neutralem Platz
