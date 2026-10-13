@@ -315,6 +315,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
 .str b { font-family: var(--font-display); font-weight: 800; font-size: 34px; color: var(--yellow); font-variant-numeric: tabular-nums; line-height: 1; }
 .pl { grid-template-columns: 2.6ch 3.4ch 1fr 2.6ch 40px; }
 .pl .rt { font-family: var(--font-display); font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
+#sofa-frame iframe { width: 100%; height: 520px; border: 0; border-radius: 10px; background: #fff; display: block; }
 .prefs { display: flex; flex-direction: column; }
 .prefs label { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--navy-3); font-size: 14.5px; cursor: pointer; }
 .prefs label:last-child { border-bottom: 0; }
@@ -576,11 +577,27 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     <div class="view" id="v-real" hidden>
       <header>
         <p class="label">Echter Live-Ticker</p>
-        <p class="hint">Echte Spielstände von Fenerbahçe und der Süper Lig, dazu Champions League und Pokal. Die Daten kommen von API-Football.</p>
+        <p class="hint">Echte Spielstände von Fenerbahçe, dazu Ergebnisse, Tabelle und Rivalen. Die Daten kommen über deinen Hintergrund-Helfer von TheSportsDB (oder API-Football), dazu optional live von Sofascore.</p>
       </header>
 
       <div id="rl-status"></div>
       <div id="rl-fb"></div>
+      <section class="panel" id="sofa">
+        <p class="label">Live bei Sofascore (Echtzeit)</p>
+        <div id="sofa-frame"></div>
+        <div id="sofa-setup">
+          <p class="hint" style="margin:0 0 8px">Sofascore bietet kostenlose Live-Widgets zum Einbinden an. So richtest du es ein: <a href="https://corporate.sofascore.com/widgets" target="_blank" rel="noopener" style="color:var(--yellow)">corporate.sofascore.com/widgets</a> öffnen, ein Widget für Fenerbahçe oder die Süper Lig auswählen, den Code kopieren und hier einfügen.</p>
+          <div class="key-row">
+            <input id="sofa-code" type="text" placeholder="Widget-Code oder Link einfügen" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Sofascore-Widget">
+            <button class="ghost" type="button" id="sofa-save">Speichern</button>
+          </div>
+          <p class="hint" id="sofa-msg" style="margin-top:6px"></p>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <a class="ghost" href="https://www.sofascore.com/de/" target="_blank" rel="noopener" style="flex:1;text-align:center;text-decoration:none">Sofascore öffnen</a>
+          <button class="ghost" type="button" id="sofa-remove" hidden style="flex:1">Widget entfernen</button>
+        </div>
+      </section>
       <section class="panel" id="rl-lineup-wrap" hidden>
         <p class="label">Echte Aufstellung</p>
         <div id="rl-lineup"></div>
@@ -2700,6 +2717,31 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
       '<div class="chart-legend"><span><i style="background:var(--yellow)"></i>Sieg Fener</span><span><i style="background:var(--opp)"></i>Niederlage</span><span>Punkte oben: Tore</span></div></div>';
   }
 
+  // ---------- Sofascore-Widget (offiziell kostenlos zum Einbinden) ----------
+  function sofaUrl(input) {
+    var v = String(input || "").trim(), m = /src\s*=\s*["']([^"']+)["']/i.exec(v);
+    if (m) v = m[1];
+    v = v.replace(/&amp;/g, "&");
+    if (!/^https:\/\/([a-z0-9-]+\.)*sofascore\.com\//i.test(v)) return null;
+    return v;
+  }
+  function renderSofa() {
+    var url = load("fb.sofa", "");
+    $("sofa-setup").hidden = !!url;
+    $("sofa-remove").hidden = !url;
+    var fr = $("sofa-frame");
+    if (!url) { fr.innerHTML = ""; return; }
+    if (!fr.firstChild || fr.firstChild.getAttribute("src") !== url) {
+      fr.innerHTML = '<iframe src="' + esc(url) + '" title="Sofascore Live" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe><p class="hint" style="margin:6px 0 0">Bleibt das Feld leer: In der Claude-Vorschau sind eingebettete Seiten gesperrt, über die GitHub-Pages-Adresse funktioniert es.</p>';
+    }
+  }
+  $("sofa-save").addEventListener("click", function () {
+    var url = sofaUrl($("sofa-code").value);
+    if (!url) { $("sofa-msg").textContent = "Das sieht nicht nach einem Sofascore-Widget aus. Kopiere den ganzen Code oder den Link, der mit https:// und sofascore.com beginnt."; return; }
+    save("fb.sofa", url); $("sofa-code").value = ""; $("sofa-msg").textContent = ""; renderSofa();
+  });
+  $("sofa-remove").addEventListener("click", function () { save("fb.sofa", ""); renderSofa(); });
+
   // ---------- Benachrichtigungen (im Helfer gespeichert) ----------
   var PUSH_LABELS = [["reminder", "Erinnerung am Spieltag (mit Prognose)"], ["lineup", "Aufstellung"], ["kickoff", "Anpfiff"], ["goals", "Tore für Fener"], ["oppgoals", "Gegentore"], ["cards", "Rote Karten und verschossene Elfmeter"], ["var", "Videobeweis (Tor zurückgenommen)"], ["ht", "Halbzeit"], ["ft", "Abpfiff"], ["rivals", "Ergebnisse von Galatasaray, Beşiktaş, Trabzonspor"], ["chance", "Siegchance in den Nachrichten"], ["stats", "Statistik in den Nachrichten"]];
   function renderPushPrefs() {
@@ -2866,9 +2908,11 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     $("use-own").hidden = !!RL.helper;
     setSeg("rl-int", "i", prefs.rlInt);
     $("rl-others-on").checked = !!prefs.rlOthers;
-    $("use-bar").style.width = Math.min(100, used / DAILY_LIMIT * 100) + "%";
-    $("use-txt").textContent = RL.helper ? "Helfer: " + used + " von " + DAILY_LIMIT + " heute verbraucht · die App selbst verbraucht nichts" : used + " von " + DAILY_LIMIT + " heute verbraucht";
-    if (RL.helper) $("use-est").textContent = "Der Helfer fragt am Spieltag etwa jede Minute ab und schickt dir Push-Nachrichten: morgens eine Erinnerung mit Prognose, dann Anpfiff, Tore und Rote Karten mit Live-Siegchance, Halbzeit und Abpfiff. Dazu die Endergebnisse von Galatasaray, Beşiktaş und Trabzonspor mit dem Abstand zu Fener. Die App liest seinen Stand alle 30 Sekunden, solange sie offen ist.";
+    $("use-bar").style.width = (hs && hs.source === "tsdb" ? 0 : Math.min(100, used / DAILY_LIMIT * 100)) + "%";
+    $("use-txt").textContent = RL.helper && hs && hs.source === "tsdb" ? "TheSportsDB: kein Tageslimit · heute " + used + " Abfragen · die App selbst verbraucht nichts" : RL.helper ? "Helfer: " + used + " von " + DAILY_LIMIT + " heute verbraucht · die App selbst verbraucht nichts" : used + " von " + DAILY_LIMIT + " heute verbraucht";
+    var tsdb = RL.helper && RL.helperState && RL.helperState.source === "tsdb";
+    if (tsdb) $("use-est").textContent = "Datenquelle: TheSportsDB (kostenlos, für private Nutzung erlaubt). Während eines Fener-Spiels schaut der Helfer alle 5 Minuten nach dem Spielstand, danach alle 15 Minuten bis zum Endergebnis. Spielstände können ein paar Minuten verzögert sein. Für Echtzeit nutze das Sofascore-Widget oben. Dazu kommen Erinnerung, Rivalen-Ergebnisse und das automatische Eintragen in deine Saison.";
+    else if (RL.helper) $("use-est").textContent = "Der Helfer fragt am Spieltag etwa jede Minute ab und schickt dir Push-Nachrichten: morgens eine Erinnerung mit Prognose, dann Anpfiff, Tore und Rote Karten mit Live-Siegchance, Halbzeit und Abpfiff. Dazu die Endergebnisse von Galatasaray, Beşiktaş und Trabzonspor mit dem Abstand zu Fener. Die App liest seinen Stand alle 30 Sekunden, solange sie offen ist.";
     else $("use-est").textContent = (prefs.rlInt === "max"
       ? "Nutzt am Spieltag das ganze Tageslimit, verteilt auf die Spielzeit: etwa alle 70 Sekunden, Tore erscheinen im Schnitt ca. 1 Minute später. "
       : { spar: "Alle 3 Minuten, Tore im Schnitt ca. 2 Minuten später. ", normal: "Alle 2 Minuten, Tore im Schnitt ca. 1,5 Minuten später. " }[prefs.rlInt] + "Pro Fener-Spiel höchstens ca. " + est + " Anfragen. ") +
@@ -2889,6 +2933,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     $("rl-key").value = RL.key ? RL.key : "";
     $("rl-helper").value = RL.helper || "";
     renderPushPrefs();
+    renderSofa();
     renderTips();
     renderUsage();
     if (!RL.key && !RL.helper) {

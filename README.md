@@ -50,3 +50,8 @@ Der Tab „Live“ zeigt echte Spielstände von Fenerbahçe, der Süper Lig, der
 
 ## Hintergrund-Helfer (Push bei geschlossener App)
 Im Ordner `helfer/` liegt ein Cloudflare Worker. Er fragt API-Football rund um Fener-Spiele etwa jede Minute ab und schickt über die App ntfy Push-Nachrichten bei Anpfiff, Toren, Roten Karten, Halbzeit und Abpfiff. Ist der Helfer in der App eingetragen, holt die App alles von ihm und verbraucht selbst keine Anfragen mehr. Die Einrichtung steht Schritt für Schritt in `helfer/ANLEITUNG.md`. In der App lässt sich einstellen, welche Nachrichten kommen sollen, und eine Grafik zeigt den Verlauf der Siegchance.
+
+## Datenquelle des Helfers
+Standard ist **TheSportsDB** (kostenlos, für private Projekte erlaubt): Spielplan, Ergebnisse, Tabelle, Rivalen. Während eines Fener-Spiels schaut der Helfer alle 5 Minuten nach dem Spielstand, danach bis zum Endergebnis. Spielstände können verzögert sein. Mit der Cloudflare-Variable `SOURCE=apifootball` und einem bezahlten API-Football-Plan nutzt der Helfer stattdessen API-Football mit Live-Ereignissen und Statistik.
+
+Für echte Live-Spielstände kann im Live-Tab ein **Sofascore-Widget** eingebunden werden (kostenlos, von Sofascore zum Einbetten angeboten).
