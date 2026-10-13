@@ -192,7 +192,37 @@ nav.tabs button { background: none; border: 0; padding: 10px 0 12px; font-size: 
 nav.tabs button svg { width: 22px; height: 22px; }
 nav.tabs button[aria-current="true"] { color: var(--yellow); }
 
-nav.tabs { grid-template-columns: repeat(4, 1fr); }
+nav.tabs { grid-template-columns: repeat(5, 1fr); }
+nav.tabs button { font-size: 11px; letter-spacing: .04em; }
+
+/* Echt-Live */
+.live-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--loss); margin-right: 6px; animation: pulse 1.4s infinite; vertical-align: 1px; }
+@keyframes pulse { 50% { opacity: .3; } }
+.rl-match { display: flex; flex-direction: column; gap: 10px; }
+.rl-row { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; }
+.rl-row .h, .rl-row .a { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.rl-row .a { text-align: right; }
+.rl-row .sc { font-family: var(--font-display); font-weight: 800; font-size: 28px; font-variant-numeric: tabular-nums; }
+.rl-row .fb { color: var(--yellow); }
+.rl-meta { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.rl-meta .min { color: var(--loss); }
+.rl-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.rl-list li { display: grid; grid-template-columns: 4ch 1fr auto 1fr; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--navy-3); font-size: 14px; }
+.rl-list li:last-child { border-bottom: 0; }
+.rl-list .mn { color: var(--loss); font-weight: 700; font-variant-numeric: tabular-nums; font-size: 12.5px; }
+.rl-list .t2 { text-align: right; }
+.rl-list .s { font-family: var(--font-display); font-weight: 800; font-size: 18px; font-variant-numeric: tabular-nums; }
+.rl-list .t1, .rl-list .t2 { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.msg { border-radius: 12px; padding: 12px 14px; background: var(--navy-2); border: 1px solid var(--line); font-size: 14px; }
+.msg.err { border-color: var(--loss); }
+.msg b { display: block; margin-bottom: 4px; }
+.msg code { font-size: 12.5px; word-break: break-all; color: var(--yellow-soft); }
+.key-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.key-row input { min-width: 0; background: var(--navy-2); border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; color: var(--fg); font: inherit; font-size: 16px; }
+.key-row .ghost { padding: 10px 14px; }
+.steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; color: var(--fg); }
+.steps a { color: var(--yellow); }
+.quota { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
 
 /* Saison */
 .season-head { display: flex; flex-direction: column; gap: 12px; }
@@ -416,6 +446,35 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
       <button class="ghost" type="button" id="reset-season">Saison neu starten (echter Stand)</button>
     </div>
 
+    <!-- ECHT-LIVE -->
+    <div class="view" id="v-real" hidden>
+      <header>
+        <p class="label">Echter Live-Ticker</p>
+        <p class="hint">Echte Spielstände von Fenerbahçe und der Süper Lig, dazu Champions League und Pokal. Die Daten kommen von API-Football.</p>
+      </header>
+
+      <div id="rl-status"></div>
+      <div id="rl-fb"></div>
+      <section class="panel" id="rl-others-wrap" hidden>
+        <p class="label">Weitere Spiele live</p>
+        <ul class="rl-list" id="rl-others"></ul>
+      </section>
+
+      <div class="row">
+        <button class="ghost" type="button" id="rl-refresh" style="flex:1">Jetzt aktualisieren</button>
+      </div>
+      <p class="quota" id="rl-quota"></p>
+
+      <section class="panel">
+        <p class="label">API-Schlüssel</p>
+        <div class="key-row">
+          <input id="rl-key" type="password" placeholder="Schlüssel von api-football.com" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="API-Schlüssel">
+          <button class="ghost" type="button" id="rl-save">Speichern</button>
+        </div>
+        <p class="hint" style="margin-top:8px">Der Schlüssel bleibt nur auf diesem Gerät gespeichert.</p>
+      </section>
+    </div>
+
     <!-- KADER -->
     <div class="view" id="v-squad" hidden>
       <header>
@@ -445,6 +504,9 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     </button>
     <button type="button" data-tab="play" aria-current="false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7l4 3-1.5 4.5h-5L8 10z"/></svg>Spiel
+    </button>
+    <button type="button" data-tab="real" aria-current="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7"/></svg>Live
     </button>
     <button type="button" data-tab="squad" aria-current="false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3l-5 3 2 4 2-1v12h10V9l2 1 2-4-5-3c0 2-2 3-4 3S8 5 8 3z"/></svg>Kader
@@ -710,6 +772,8 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     $("v-season").hidden = !(tab === "season" && liveFor !== "season");
     $("v-squad").hidden = tab !== "squad";
     $("v-history").hidden = tab !== "history";
+    $("v-real").hidden = tab !== "real";
+    if (tab === "real") { renderReal(); refreshReal(false); } else if (typeof RL !== "undefined") clearTimeout(RL.timer);
     if (tab === "squad") renderSquad();
     if (tab === "history") renderHistory();
     if (tab === "season" && liveFor !== "season") renderSeason();
@@ -1515,6 +1579,213 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     if (b.dataset.armed) { delete b.dataset.armed; b.textContent = "Saison neu starten (echter Stand)"; initSeason(); renderSeason(); $("main").scrollTop = 0; }
     else { b.dataset.armed = "1"; b.textContent = "Simulierte Spiele verwerfen? Nochmal tippen"; b._t = setTimeout(function () { b.textContent = "Saison neu starten (echter Stand)"; delete b.dataset.armed; }, 3000); }
   });
+
+  // =====================================================================
+  // ECHTER LIVE-TICKER (API-Football, v3.football.api-sports.io)
+  // =====================================================================
+  var API = "https://v3.football.api-sports.io";
+  var LEAGUES = { 203: "Süper Lig", 2: "Champions League", 206: "Türkiye Kupası" };
+  var PAGES_URL = "https://5kgfb8k2zn-lang.github.io/Fener-Simulator-/";
+  var RL = { key: load("fb.apikey", ""), live: [], fbFx: null, nextFx: null, lastFx: null, err: null, loading: false, polled: 0, quota: null, lastListAt: 0, lastInfoAt: 0, teamId: load("fb.apiteam", null), timer: null, updated: null };
+
+  function norm(s) { return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/ı/g, "i").toLowerCase().replace(/[^a-z]/g, ""); }
+  function isFb(name) { return norm(name).indexOf("fenerbahce") === 0; }
+
+  function apiGet(path) {
+    return fetch(API + path, { headers: { "x-apisports-key": RL.key } }).then(function (r) {
+      var rem = r.headers.get("x-ratelimit-requests-remaining");
+      if (rem !== null) RL.quota = +rem;
+      RL.polled++;
+      return r.json();
+    }).then(function (j) {
+      var e = j && j.errors;
+      if (e && (Array.isArray(e) ? e.length : Object.keys(e).length)) {
+        var msg = Array.isArray(e) ? e.join(" ") : Object.keys(e).map(function (k) { return e[k]; }).join(" ");
+        throw new Error("API: " + msg);
+      }
+      return j.response || [];
+    });
+  }
+
+  function ensureTeamId() {
+    if (RL.teamId) return Promise.resolve(RL.teamId);
+    return apiGet("/teams?search=Fenerbahce").then(function (res) {
+      var t = res.filter(function (x) { return x.team && isFb(x.team.name) && !/W$|U\d+/.test(x.team.name); })[0];
+      if (!t) throw new Error("Fenerbahçe wurde bei API-Football nicht gefunden.");
+      RL.teamId = t.team.id; save("fb.apiteam", RL.teamId);
+      return RL.teamId;
+    });
+  }
+
+  function refreshReal(force) {
+    if (!RL.key || RL.loading) { renderReal(); return; }
+    RL.loading = true; RL.err = null; renderReal();
+    var now = Date.now();
+    var p = Promise.resolve();
+    // Liste der Live-Spiele höchstens alle 10 Minuten neu holen, dazwischen nur Details der bekannten Spiele
+    var needList = force || !RL.live.length || now - RL.lastListAt > 10 * 60 * 1000;
+    if (needList) {
+      p = p.then(function () { return apiGet("/fixtures?live=" + Object.keys(LEAGUES).join("-")); })
+        .then(function (res) { RL.live = res; RL.lastListAt = Date.now(); });
+    }
+    p = p.then(function () {
+      var running = RL.live.filter(function (f) { return ["FT", "AET", "PEN"].indexOf(f.fixture.status.short) < 0; });
+      if (!running.length) return;
+      var ids = running.slice(0, 20).map(function (f) { return f.fixture.id; }).join("-");
+      // "ids" liefert die Ereignisse (Tore, Karten, Wechsel) mit
+      return apiGet("/fixtures?ids=" + ids).then(function (res) { RL.live = res; });
+    });
+    p = p.then(function () {
+      RL.fbFx = RL.live.filter(function (f) { return isFb(f.teams.home.name) || isFb(f.teams.away.name); })[0] || null;
+      // Nächstes und letztes Spiel nur alle 30 Minuten (spart Anfragen)
+      if (RL.fbFx || (!force && RL.nextFx && Date.now() - RL.lastInfoAt < 30 * 60 * 1000)) return;
+      return ensureTeamId().then(function (id) {
+        return Promise.all([apiGet("/fixtures?team=" + id + "&next=1"), apiGet("/fixtures?team=" + id + "&last=1")]);
+      }).then(function (r) { RL.nextFx = r[0][0] || null; RL.lastFx = r[1][0] || null; RL.lastInfoAt = Date.now(); });
+    });
+    p.then(function () { RL.updated = new Date(); }, function (e) { RL.err = e; })
+      .then(function () { RL.loading = false; renderReal(); scheduleReal(); });
+  }
+
+  function scheduleReal() {
+    clearTimeout(RL.timer);
+    if (currentTab !== "real" || document.hidden || !RL.key || RL.err) return;
+    // Nur pollen, wenn wirklich ein Spiel läuft: alle 90 s (ca. 75 Anfragen pro Spiel)
+    var anyLive = RL.live.some(function (f) { return ["FT", "AET", "PEN", "PST", "CANC"].indexOf(f.fixture.status.short) < 0; });
+    if (anyLive) RL.timer = setTimeout(function () { refreshReal(false); }, 90 * 1000);
+  }
+  document.addEventListener("visibilitychange", function () { if (!document.hidden && currentTab === "real") refreshReal(false); else clearTimeout(RL.timer); });
+
+  function minuteText(f) {
+    var s = f.fixture.status;
+    if (s.short === "HT") return "Halbzeit";
+    if (["FT", "AET", "PEN"].indexOf(s.short) >= 0) return "Ende";
+    if (s.short === "NS") return "Anstoß " + new Date(f.fixture.date).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+    return (s.elapsed || 0) + (s.extra ? "+" + s.extra : "") + "'";
+  }
+
+  function eventRow(ev) {
+    var min = (ev.time.elapsed || 0) + (ev.time.extra ? "+" + ev.time.extra : "") + "'";
+    var who = ev.player && ev.player.name ? esc(ev.player.name) : "";
+    var team = ev.team ? esc(ev.team.name) : "";
+    var fb = ev.team && isFb(ev.team.name);
+    var icon = IC.dot, txt = "", cls = "";
+    if (ev.type === "Goal") {
+      if (ev.detail === "Missed Penalty") { txt = "Elfmeter verschossen: " + who + " (" + team + ")"; }
+      else {
+        icon = IC.ball; cls = (fb ? "goal-fb" : "goal-op") + " big";
+        txt = (fb ? "TOOOR für Fenerbahçe! " : "Tor für " + team + ": ") + "<b>" + who + "</b>" +
+          (ev.detail === "Penalty" ? " (Elfmeter)" : ev.detail === "Own Goal" ? " (Eigentor)" : "") +
+          (ev.assist && ev.assist.name ? ". Vorlage: " + esc(ev.assist.name) : "");
+      }
+    } else if (ev.type === "Card") {
+      icon = /Red|Second/.test(ev.detail) ? IC.r : IC.y;
+      txt = (/Red|Second/.test(ev.detail) ? "Rote Karte" : "Gelbe Karte") + " für " + who + " (" + team + ")";
+      if (/Red|Second/.test(ev.detail)) cls = "big";
+    } else if (ev.type === "subst") {
+      icon = IC.sub;
+      txt = "Wechsel bei " + team + ": " + (ev.assist && ev.assist.name ? esc(ev.assist.name) : "?") + " für " + who;
+    } else if (ev.type === "Var") {
+      txt = "Videobeweis: " + esc(ev.detail || "") + (who ? " (" + who + ")" : "");
+    } else return "";
+    return '<li class="' + cls + '"><span class="m">' + min + '</span><span class="ic">' + icon + '</span><span class="tx">' + txt + "</span></li>";
+  }
+
+  function matchCard(f, title) {
+    var h = f.teams.home.name, a = f.teams.away.name;
+    var live = ["NS", "FT", "AET", "PEN", "PST", "CANC", "TBD"].indexOf(f.fixture.status.short) < 0;
+    var gh = f.goals.home === null ? "–" : f.goals.home, ga = f.goals.away === null ? "–" : f.goals.away;
+    var evs = (f.events || []).slice().reverse().map(eventRow).join("");
+    var when = new Date(f.fixture.date).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" });
+    return '<div class="board rl-match">' +
+      '<div class="rl-meta"><span>' + (live ? '<span class="live-dot"></span>' : "") + esc(title) + " · " + esc(LEAGUES[f.league.id] || f.league.name) + '</span><span class="' + (live ? "min" : "") + '">' + (live ? minuteText(f) : f.fixture.status.short === "NS" ? when + " · " + minuteText(f) : when + " · Ende") + "</span></div>" +
+      '<div class="rl-row"><span class="h' + (isFb(h) ? " fb" : "") + '">' + esc(h) + '</span><span class="sc">' + gh + ":" + ga + '</span><span class="a' + (isFb(a) ? " fb" : "") + '">' + esc(a) + "</span></div>" +
+      (evs ? '<ul class="ticker">' + evs + "</ul>" : live ? '<p class="hint">Noch keine Ereignisse.</p>' : "") +
+      seasonSyncButton(f) +
+      "</div>";
+  }
+
+  // Echtes Endergebnis in die Saison-Simulation übernehmen
+  function findSeasonFixture(f) {
+    if (!S) return null;
+    var fbHome = isFb(f.teams.home.name);
+    var opp = norm(fbHome ? f.teams.away.name : f.teams.home.name);
+    var day = f.fixture.date.slice(0, 10);
+    return S.fixtures.filter(function (x) {
+      if (x.done) return false;
+      var o = norm(x.opp);
+      var nameOk = o.slice(0, 5) === opp.slice(0, 5) || opp.indexOf(o.slice(0, 6)) >= 0 || o.indexOf(opp.slice(0, 6)) >= 0;
+      var diff = Math.abs(new Date(x.d) - new Date(day)) / 86400000;
+      return nameOk && diff <= (x.approx ? 21 : 3);
+    })[0] || null;
+  }
+  function seasonSyncButton(f) {
+    if (["FT", "AET", "PEN"].indexOf(f.fixture.status.short) < 0) return "";
+    var sx = findSeasonFixture(f);
+    if (!sx) return "";
+    return '<button class="ghost" type="button" data-sync="' + f.fixture.id + '">Echtes Ergebnis in die Saison übernehmen (' + esc(sx.rd) + ")</button>";
+  }
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-sync]"); if (!b) return;
+    var id = +b.dataset.sync;
+    var f = [RL.fbFx, RL.lastFx].concat(RL.live).filter(function (x) { return x && x.fixture.id === id; })[0];
+    if (!f) return;
+    var sx = findSeasonFixture(f); if (!sx) return;
+    var fbHome = isFb(f.teams.home.name);
+    var fg = fbHome ? f.goals.home : f.goals.away, og = fbHome ? f.goals.away : f.goals.home;
+    var pens = null;
+    if (f.score && f.score.penalty && f.score.penalty.home !== null) pens = { fb: fbHome ? f.score.penalty.home : f.score.penalty.away, op: fbHome ? f.score.penalty.away : f.score.penalty.home };
+    sx.real = true;
+    applyFixtureResult(sx.id, { fg: fg, og: og, pens: pens, scorers: [] });
+    b.outerHTML = '<p class="hint">Übernommen: ' + esc(sx.rd) + " " + fg + ":" + og + " aus Fener-Sicht.</p>";
+  });
+
+  function renderReal() {
+    var st = $("rl-status");
+    $("rl-key").value = RL.key ? RL.key : "";
+    if (!RL.key) {
+      st.innerHTML = '<div class="msg"><b>So schaltest du den echten Live-Ticker frei</b><ol class="steps">' +
+        '<li>Kostenlos registrieren auf <a href="https://dashboard.api-football.com/register" target="_blank" rel="noopener">dashboard.api-football.com</a> (Free-Plan, 100 Anfragen pro Tag).</li>' +
+        "<li>Im Dashboard unter „Account“ den API-Key kopieren.</li>" +
+        "<li>Den Key unten einfügen und „Speichern“ tippen.</li></ol></div>";
+      st.hidden = false;
+      $("rl-fb").innerHTML = ""; $("rl-others-wrap").hidden = true; $("rl-quota").textContent = "";
+      return;
+    }
+    if (RL.err) {
+      var m = String(RL.err.message || RL.err);
+      var blocked = /Failed to fetch|NetworkError|Load failed|blocked/i.test(m);
+      st.innerHTML = '<div class="msg err"><b>' + (blocked ? "Keine Verbindung zu API-Football" : "Fehler vom Datendienst") + "</b>" +
+        (blocked ? 'Diese Ansicht blockiert Verbindungen zu fremden Diensten (das passiert in der Claude-Vorschau). Öffne die App über GitHub Pages: <code>' + PAGES_URL + "</code>. Ohne Internet geht es auch nicht."
+          : esc(m) + (/plan|season/i.test(m) ? " Der Free-Plan erlaubt eventuell nicht die aktuelle Saison. Dann hilft nur ein bezahlter Plan." : /key|token/i.test(m) ? " Prüfe den API-Key." : "")) + "</div>";
+    } else if (RL.loading) st.innerHTML = '<div class="msg">Lade Live-Daten …</div>';
+    else st.innerHTML = "";
+    st.hidden = !st.innerHTML;
+
+    var fbHtml = "";
+    if (RL.fbFx) fbHtml = matchCard(RL.fbFx, "Fener live");
+    else if (!RL.err && RL.updated) {
+      fbHtml = '<div class="msg">Fenerbahçe spielt gerade nicht. Der Ticker aktualisiert sich automatisch, sobald ein Spiel läuft und dieser Tab offen ist.</div>';
+      if (RL.nextFx) fbHtml += matchCard(RL.nextFx, "Nächstes Spiel");
+      if (RL.lastFx) fbHtml += matchCard(RL.lastFx, "Letztes Spiel");
+    }
+    $("rl-fb").innerHTML = fbHtml;
+
+    var others = RL.live.filter(function (f) { return f !== RL.fbFx; });
+    $("rl-others-wrap").hidden = !others.length;
+    $("rl-others").innerHTML = others.map(function (f) {
+      return '<li><span class="mn">' + minuteText(f) + '</span><span class="t1">' + esc(f.teams.home.name) + '</span><span class="s">' + (f.goals.home === null ? "–" : f.goals.home) + ":" + (f.goals.away === null ? "–" : f.goals.away) + '</span><span class="t2">' + esc(f.teams.away.name) + "</span></li>";
+    }).join("");
+
+    $("rl-quota").textContent = (RL.updated ? "Stand " + RL.updated.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) + " · " : "") +
+      (RL.quota !== null ? "noch " + RL.quota + " Anfragen heute" : RL.polled ? RL.polled + " Anfragen in dieser Sitzung" : "");
+  }
+
+  $("rl-save").addEventListener("click", function () {
+    RL.key = $("rl-key").value.trim(); save("fb.apikey", RL.key);
+    RL.err = null; RL.live = []; refreshReal(true);
+  });
+  $("rl-refresh").addEventListener("click", function () { RL.err = null; refreshReal(true); });
 
   // =====================================================================
   // Start

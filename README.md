@@ -21,3 +21,11 @@ Den Code in `src/app.html` bearbeiten, dann `python3 build.py` ausführen. Das e
 
 ## Datenstand
 Kader, Tabelle und Spielplan entsprechen dem Stand vom 13.10.2026. Annahmen: Die Rückrunde ist die gespiegelte Hinrunde mit geschätzten Terminen. Bei einigen Teams ist die Tordifferenz geschätzt. K.-o.-Gegner in der CL und im Pokal werden zufällig gelost. Die Stärkewerte der Teams sind Einschätzungen.
+
+## Echter Live-Ticker
+Der Tab „Live“ zeigt echte Spielstände von Fenerbahçe, der Süper Lig, der Champions League und des Pokals. Die Daten kommen von [API-Football](https://www.api-football.com/).
+1. Die App über GitHub Pages öffnen. In der Claude-Vorschau sind Verbindungen zu fremden Diensten gesperrt.
+2. Kostenlos auf dashboard.api-football.com registrieren und den API-Key kopieren.
+3. Den Key im Tab „Live“ einfügen. Er wird nur im Browser gespeichert und nie ins Repository geschrieben.
+
+Während ein Spiel läuft, fragt die App alle 90 Sekunden neue Daten ab. Das sind etwa 75 Anfragen pro Spiel, der Free-Plan erlaubt 100 pro Tag. Nach Abpfiff lässt sich das echte Ergebnis mit einem Tipp in die Saison-Simulation übernehmen.
