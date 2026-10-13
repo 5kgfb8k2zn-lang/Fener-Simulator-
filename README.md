@@ -28,6 +28,9 @@ Eine Fußball-Simulations-App nur für Fenerbahçe-Spiele. Sie besteht aus einer
 - Formfaktor: Die Stärkewerte werden anhand der echten Tordifferenz pro Spiel nachjustiert (Gewicht wächst mit der Zahl der Spiele, höchstens ±6).
 - Sperren: Liga nach jeder 4. Gelben, CL und Pokal nach jeder 3., Gelb-Rot 1 Spiel, Rot 2 Spiele, jeweils im selben Wettbewerb. Verletzungen dauern 1 bis 17 Spiele. Ausfälle werden positionsgerecht von der Bank ersetzt.
 - Live-Spiele laufen komplett automatisch, der Trainer wechselt selbst.
+- Spielverlauf: Wer zurückliegt, drängt (stärker gegen Ende), wer führt, verwaltet. Ca. 45 % der Tore fallen vor der Pause, gut 20 % ab der 76. Minute. Dazu Elfmeter (ca. 0,3 pro Spiel), Eigentore, Torwart-Qualität, Nachspielzeit von 1–5 bzw. 3–8 Minuten.
+- Heimvorteil je Stadion (Kadıköy, RAMS Park, Papara Park etwas stärker), Englische Wochen machen müde.
+- Saisonwerte im Test: Meister ca. 81 Punkte aus 34 Spielen, Platz 16 ca. 29.
 
 ## Aufs iPhone
 1. `index.html` irgendwo hosten, z. B. mit GitHub Pages (Settings → Pages → Branch wählen).
