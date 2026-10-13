@@ -22,7 +22,6 @@ Eine Fußball-Simulations-App nur für Fenerbahçe-Spiele. Sie besteht aus einer
 - **Torjubel mit Ton**, Verletzungen, Spielerstatistik der Saison (Tore, Vorlagen, Spieler des Spiels).
 - **Echte Ergebnisse von Hand eintragen**: Offenes Spiel im Spielplan antippen.
 - **Tippspiel** für die nächsten echten Fener-Spiele.
-- **Mit API-Key**: Echter Stand (Tabelle, Ergebnisse, Termine) wird automatisch geladen, höchstens alle 6 Stunden. Die echte Aufstellung lässt sich als Startelf übernehmen.
 
 ## Simulation: so realistisch wie möglich
 - Die Engine ist auf Süper-Lig-Durchschnittswerte abgestimmt: ca. 2,8 Tore pro Spiel, 12 Schüsse und 5 Ecken pro Team, 34 % aufs Tor, 2,2 Gelbe und 0,13 Platzverweise pro Team, Heimbilanz ca. 44/26/30.
@@ -41,17 +40,10 @@ Den Code in `src/app.html` bearbeiten, dann `python3 build.py` ausführen. Das e
 Kader, Tabelle und Spielplan entsprechen dem Stand vom 13.10.2026. Annahmen: Die Rückrunde ist die gespiegelte Hinrunde mit geschätzten Terminen. Bei einigen Teams ist die Tordifferenz geschätzt. K.-o.-Gegner in der CL und im Pokal werden zufällig gelost. Die Stärkewerte der Teams sind Einschätzungen.
 
 ## Echter Live-Ticker
-Der Tab „Live“ zeigt echte Spielstände von Fenerbahçe, der Süper Lig, der Champions League und des Pokals. Die Daten kommen von [API-Football](https://www.api-football.com/).
-1. Die App über GitHub Pages öffnen. In der Claude-Vorschau sind Verbindungen zu fremden Diensten gesperrt.
-2. Kostenlos auf dashboard.api-football.com registrieren und den API-Key kopieren.
-3. Den Key im Tab „Live“ einfügen. Er wird nur im Browser gespeichert und nie ins Repository geschrieben.
-
-**Abfragen nach Spielplan:** Die App fragt nur rund um Fener-Spiele ab. Im Standard „Maximal“ nutzt sie am Spieltag das ganze Tageslimit (etwa alle 70 Sekunden, Tore im Schnitt ca. 1 Minute später). Nach Abpfiff trägt sie das Ergebnis automatisch in die Saison ein. Abgefragt wird von 5 Minuten vor Anpfiff bis Abpfiff, in der Halbzeit seltener. Im Test brauchte ein ganzer Spieltag etwa 50 Anfragen, an anderen Tagen braucht die App höchstens 2. Es gibt einen Zähler pro Tag, 5 Anfragen bleiben immer als Reserve, und die App drosselt sich selbst, wenn das Budget knapp wird. Nach Abpfiff lässt sich das echte Ergebnis mit einem Tipp in die Saison-Simulation übernehmen.
+Der Tab „Live“ zeigt echte Spielstände von Fenerbahçe, Ergebnisse, Tabelle und Rivalen. Die Daten holt der Hintergrund-Helfer (siehe unten) kostenlos von TheSportsDB. Für Echtzeit gibt es Knöpfe zu Google und Sofascore. Nach Abpfiff wird das echte Ergebnis automatisch in die Saison eingetragen.
 
 ## Hintergrund-Helfer (Push bei geschlossener App)
-Im Ordner `helfer/` liegt ein Cloudflare Worker. Er fragt API-Football rund um Fener-Spiele etwa jede Minute ab und schickt über die App ntfy Push-Nachrichten bei Anpfiff, Toren, Roten Karten, Halbzeit und Abpfiff. Ist der Helfer in der App eingetragen, holt die App alles von ihm und verbraucht selbst keine Anfragen mehr. Die Einrichtung steht Schritt für Schritt in `helfer/ANLEITUNG.md`. In der App lässt sich einstellen, welche Nachrichten kommen sollen, und eine Grafik zeigt den Verlauf der Siegchance.
+Im Ordner `helfer/` liegt ein Cloudflare Worker. Er holt die Fener-Spiele kostenlos von TheSportsDB und schickt über die App ntfy Push-Nachrichten bei Anpfiff, Toren, Halbzeit und Endergebnis, dazu eine Erinnerung am Spieltag und die Rivalen-Ergebnisse. Die Einrichtung steht Schritt für Schritt in `helfer/ANLEITUNG.md`. In der App lässt sich einstellen, welche Nachrichten kommen sollen, und eine Grafik zeigt den Verlauf der Siegchance.
 
 ## Datenquelle des Helfers
-Standard ist **TheSportsDB** (kostenlos, für private Projekte erlaubt): Spielplan, Ergebnisse, Tabelle, Rivalen. Während eines Fener-Spiels schaut der Helfer alle 5 Minuten nach dem Spielstand, danach bis zum Endergebnis. Spielstände können verzögert sein. Mit der Cloudflare-Variable `SOURCE=apifootball` und einem bezahlten API-Football-Plan nutzt der Helfer stattdessen API-Football mit Live-Ereignissen und Statistik.
-
-Für echte Live-Spielstände kann im Live-Tab ein **Sofascore-Widget** eingebunden werden (kostenlos, von Sofascore zum Einbetten angeboten).
+**TheSportsDB** (kostenlos, für private Projekte erlaubt, kein Schlüssel): Spielplan, Ergebnisse, Tabelle, Rivalen. Während eines Fener-Spiels fragt der Helfer jede Minute nach dem Spielstand, danach bis zum Endergebnis. Spielstände können verzögert sein, weil TheSportsDB sie selbst erst einträgt.
