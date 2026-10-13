@@ -419,13 +419,14 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
 
       <div class="controls" id="live-controls">
         <button class="ghost" type="button" id="pause">Pause</button>
-        <button class="ghost" type="button" id="faster">Tempo ×2</button>
+        <button class="ghost" type="button" id="faster">Tempo ×1</button>
         <button class="ghost" type="button" id="skip">Zum Ende</button>
         <button class="ghost" type="button" id="sound" aria-pressed="true">Ton an</button>
       </div>
 
       <section class="panel" id="coach">
         <p class="label">Trainer · du entscheidest</p>
+        <p class="hint" style="margin:0 0 8px">Gewechselt wird nur, wenn du es machst. Verletzte Spieler werden automatisch ersetzt.</p>
         <div class="seg" id="live-tac">
           <button type="button" data-t="def" aria-pressed="false">Defensiv</button>
           <button type="button" data-t="bal" aria-pressed="true">Ausgewogen</button>
@@ -438,7 +439,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
           <select id="sub-off" class="sel"></select>
           <label class="hint" for="sub-on">Rein</label>
           <select id="sub-on" class="sel"></select>
-          <label class="toggle" for="sub-auto"><input type="checkbox" id="sub-auto"><span>Restliche Wechsel automatisch<small>Aus: Nur du wechselst. Verletzte werden trotzdem ersetzt.</small></span></label>
+          <label class="toggle" for="sub-auto"><input type="checkbox" id="sub-auto"><span>Ab jetzt automatisch wechseln<small>Aus: Nur du wechselst. Verletzte werden trotzdem ersetzt.</small></span></label>
           <div class="btn-row" style="margin:0"><button class="ghost" type="button" id="sub-cancel">Schließen</button><button class="cta" type="button" id="sub-do" style="font-size:18px;padding:10px">Einwechseln</button></div>
         </div>
       </section>
@@ -557,7 +558,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     <div class="view" id="v-real" hidden>
       <header>
         <p class="label">Echter Live-Ticker</p>
-        <p class="hint">Echte Spielstände von Fenerbahçe, dazu Ergebnisse, Tabelle und Rivalen. Die Daten holt dein Hintergrund-Helfer kostenlos von TheSportsDB.</p>
+        <p class="hint">Echte Spielstände, Ergebnisse, Tabelle und Rivalen. Dein Hintergrund-Helfer holt sie kostenlos von TheSportsDB und schickt dir Push-Nachrichten. Spielstände während des Spiels können verzögert sein, für Echtzeit tippe auf „Live bei Google“.</p>
       </header>
 
       <div id="rl-status"></div>
@@ -590,12 +591,8 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
         <button class="ghost" type="button" id="rl-refresh" style="flex:1">Aktualisieren</button>
       </div>
       <p class="quota" id="rl-quota"></p>
+      <p class="quota" id="app-version"></p>
 
-      <section class="panel">
-        <p class="label">Datenquelle</p>
-        <p class="hint" style="margin:0" id="use-est">Der Hintergrund-Helfer holt die Spiele kostenlos von TheSportsDB (für private Nutzung erlaubt, ohne Schlüssel und ohne Tageslimit). Während eines Fener-Spiels schaut er jede Minute nach dem Spielstand, danach bis zum Endergebnis. Spielstände können verzögert sein, weil TheSportsDB sie selbst erst einträgt. Für echte Echtzeit nutze den Knopf „Live bei Google“.</p>
-        <p class="hint" style="margin:8px 0 0"><b id="use-txt" style="color:var(--fg)"></b></p>
-      </section>
 
       <section class="panel">
         <div class="row"><p class="label" style="margin:0">Tippspiel</p><span class="form-val" id="tip-total">0 P</span></div>
@@ -616,7 +613,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
           <p class="label">Welche Nachrichten willst du?</p>
           <div id="push-prefs" class="prefs"></div>
         </div>
-        <p class="hint" style="margin-top:8px" id="rl-helper-msg">Ist der Helfer eingetragen, holt die App alles von ihm und verbraucht selbst keine Anfragen mehr. Leer lassen, um ohne Helfer zu arbeiten.</p>
+        <p class="hint" style="margin-top:8px" id="rl-helper-msg">Ist der Helfer eingetragen, holt die App alle echten Daten von ihm.</p>
       </section>
     </div>
 
@@ -683,14 +680,15 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
 
   // =====================================================================
   // DATEN – eingebauter Stand 13.10.2026 (nach dem 7. Spieltag)
-  // Mit API-Key wird das per "Echten Stand laden" durch echte Daten ersetzt.
+  // Mit Hintergrund-Helfer wird das automatisch durch den echten Stand ersetzt.
   // =====================================================================
+  var APP_VERSION = "18 (14.10.2026)";
   var FB_NAME = "Fenerbahçe";
   var FB_RATING = 84;
   var FB_STADIUM = "Chobani Stadyumu";
   var SEASON_YEAR = 2026;
 
-  // Süper Lig 2026/27: Stärke (r) ist eine Einschätzung, key = Suchwort für Namen aus der API
+  // Süper Lig 2026/27: Stärke (r) ist eine Einschätzung, key = Suchwort für Vereinsnamen aus den echten Daten
   var LEAGUE = [
     { n: "Galatasaray", r: 84, rival: true, st: "RAMS Park", key: ["galatasaray"] },
     { n: "Beşiktaş", r: 80, rival: true, st: "Tüpraş Stadyumu", key: ["besiktas"] },
@@ -1118,7 +1116,8 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
       op: { r: cfg.opp.r + (cfg.venue === "away" ? homeAdv : 0), g: 0, shots: 0, sot: 0, xg: 0, corners: 0, fouls: 0, y: 0, red: 0, poss: 0, scorers: [] },
       onPitch: (cfg.xi || squad.xi).map(function (p) { return { no: p.no, pos: p.pos, n: p.n, r: p.r || 76, rating: 6.3 + rnd() * 0.4, booked: false, off: false }; }),
       bench: (cfg.bench || squad.bench).map(function (p) { return { no: p.no, pos: p.pos, n: p.n, r: p.r || 76, rating: 6.4, booked: false, off: false }; }),
-      cardLog: [], injLog: [], autoSub: true,
+      cardLog: [], injLog: [], autoSub: !(cfg.live && prefs.speed > 0), // live wechselst nur du, im Hintergrund wechselt der Trainer
+      mult: 1,
       subs: 0, minute: 0, half: 1,
       added1: 1 + Math.floor(rnd() * 4), added2: 2 + Math.floor(rnd() * 5),
       momentum: 0, done: false, pens: null, conf: round,
@@ -1538,6 +1537,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     $("live-controls").hidden = false;
     $("pens").hidden = true;
     $("pause").textContent = "Pause";
+    $("faster").textContent = "Tempo ×1";
     $("t-home").textContent = M.fbHome ? FB_NAME : M.opp.n;
     $("t-away").textContent = M.fbHome ? M.opp.n : FB_NAME;
     $("t-home").className = "team" + (M.fbHome ? " fb" : "");
@@ -1584,7 +1584,9 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
   });
   $("faster").addEventListener("click", function () {
     if (M.done) return;
-    M.speed = Math.max(40, Math.round((M.speed || 250) / 2));
+    M.mult = M.mult >= 8 ? 1 : M.mult * 2;
+    M.speed = Math.max(25, Math.round((prefs.speed || 250) / M.mult));
+    this.textContent = "Tempo ×" + M.mult;
     if (timer) run();
   });
   $("skip").addEventListener("click", function () {
@@ -1649,7 +1651,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
   }
 
   var FINISHED = ["FT", "AET", "PEN"];
-  // Echte API-Daten in Spielplan und Tabelle einarbeiten
+  // Echte Daten vom Helfer in Spielplan und Tabelle einarbeiten
   function mergeReal(fixtures, fresh) {
     if (!REAL || !REAL.fixtures) return null;
     // Ergebnisse nur übernehmen, wenn auch die echte Tabelle da ist (sonst passt beides nicht zusammen)
@@ -2289,7 +2291,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
   var LEAGUES = { 203: "Süper Lig", 2: "Champions League", 206: "Türkiye Kupası" };
   var PAGES_URL = "https://5kgfb8k2zn-lang.github.io/Fener-Simulator-/";
   var STOP = ["FT", "AET", "PEN", "PST", "CANC", "ABD", "AWD", "WO"];
-  // Reste der früheren API-Football-Anbindung vom Gerät löschen (inkl. Schlüssel)
+  // Reste einer früheren Version vom Gerät löschen (inkl. alter Schlüssel)
   ["fb.apikey", "fb.apiusage", "fb.apiteam"].forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} });
   var RL = { fbFx: null, nextFx: null, lastFx: null, err: null, loading: false, timer: null, updated: null, syncing: false, info: "", nextPollAt: null, helper: String(load("fb.helper", "") || "").replace(/\/+$/, ""), helperState: null };
 
@@ -2604,7 +2606,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     if (Math.sign(t.fg - t.og) === Math.sign(fg - og)) return 1;
     return 0;
   }
-  // Echte Ergebnisse für Tipps: aus API-Daten oder von Hand eingetragen
+  // Echte Ergebnisse für Tipps: vom Helfer oder von Hand eingetragen
   function realResultFor(key) {
     if (MANUAL[key]) return MANUAL[key];
     if (S) { var f = S.fixtures.filter(function (x) { return x.real && fxKey(x) === key; })[0]; if (f) return { fg: f.fg, og: f.og }; }
@@ -2642,18 +2644,15 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     save("fb.tips.v1", TIPS); renderTips();
   });
 
-  function renderUsage() {
-    var hs = RL.helperState, used = hs && hs.usage && hs.usage.day === utcDay() ? hs.usage.n : 0;
-    $("use-txt").textContent = RL.helper ? "Heute " + used + " Abfragen bei TheSportsDB · kostenlos, kein Tageslimit" : "";
-  }
+
 
   function renderReal() {
     var st = $("rl-status");
     $("rl-helper").value = RL.helper || "";
+    $("app-version").textContent = "App-Version " + APP_VERSION;
     renderPushPrefs();
     renderSofa();
     renderTips();
-    renderUsage();
     if (!RL.helper) {
       st.hidden = false;
       st.innerHTML = '<div class="msg"><b>Noch kein Hintergrund-Helfer verbunden</b>Richte ihn unten mit „Helfer bei Cloudflare einrichten“ ein und trage dann seine Adresse ein. Danach kommen echte Ergebnisse, Tabelle und Push-Nachrichten automatisch.</div>';
