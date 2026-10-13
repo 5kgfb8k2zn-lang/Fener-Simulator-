@@ -17,7 +17,7 @@ if [ -z "$ID" ]; then
   $W d1 create fener >/dev/null
   ID=$($W d1 list --json | python3 -c 'import sys,json; print(next(d["uuid"] for d in json.load(sys.stdin) if d["name"]=="fener"))')
 fi
-sed "s/__D1_ID__/$ID/" wrangler.toml > .wrangler.deploy.toml
+sed "s/^database_name = \"fener\"$/database_name = \"fener\"\ndatabase_id = \"$ID\"/" wrangler.toml > .wrangler.deploy.toml
 
 $W deploy --config .wrangler.deploy.toml
 

@@ -49,9 +49,11 @@ export default {
         await push(env, { title: "Fener-Helfer", message: "Test erfolgreich! Ab jetzt bekommst du hier die Tore von Fenerbahçe.", tags: ["white_check_mark"], priority: 3 });
         return new Response(JSON.stringify({ ok: true }), { headers });
       }
-      return new Response("Fener-Helfer läuft (Version " + VERSION + "). Den Stand gibt es unter /state.", {
-        headers: { ...headers, "Content-Type": "text/plain; charset=utf-8" },
-      });
+      if (url.pathname === "/" || url.pathname === "") {
+        const s = await load(env);
+        return new Response(setupPage(s, env, url.origin), { headers: { ...headers, "Content-Type": "text/html; charset=utf-8" } });
+      }
+      return new Response("Nicht gefunden.", { status: 404, headers: { ...headers, "Content-Type": "text/plain; charset=utf-8" } });
     } catch (e) {
       return new Response(JSON.stringify({ error: String((e && e.message) || e) }), { status: 500, headers });
     }
@@ -87,6 +89,47 @@ function publicState(s, env) {
     live: s.live, lastLive: s.lastLive, lineups: s.lineups, usage: s.usage, lastPollAt: s.lastPollAt,
     error: s.error, push: !!env.NTFY_TOPIC, apiKey: !!env.API_KEY,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Einrichtungs-Seite (für das iPhone): Status, Adresse kopieren, Test-Nachricht
+// ---------------------------------------------------------------------------
+function esc(x) { return String(x).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function setupPage(s, env, origin) {
+  const now = Date.now();
+  const n = s.fixtures.length ? nextFx(s, now) : null;
+  const row = (ok, label, hint) => `<li class="${ok ? "ok" : "no"}"><b>${ok ? "✓" : "✗"}</b><span>${label}${hint ? `<small>${hint}</small>` : ""}</span></li>`;
+  const checks = [
+    row(!!env.API_KEY, "API-Schlüssel eingetragen", env.API_KEY ? "" : "In Cloudflare unter Settings → Variables and Secrets: API_KEY"),
+    row(!!env.NTFY_TOPIC, "Push-Kanal eingetragen", env.NTFY_TOPIC ? "" : "In Cloudflare unter Settings → Variables and Secrets: NTFY_TOPIC"),
+    row(!!env.DB, "Datenbank verbunden"),
+    row(!!s.syncedAt, "Spielplan geladen", s.syncedAt ? "Stand " + new Date(s.syncedAt).toLocaleString("de-DE", { timeZone: "Europe/Berlin" }) : "Passiert innerhalb einer Minute nach dem Einrichten. Seite dann neu laden."),
+  ].join("");
+  const next = n ? `${esc(n.h)} – ${esc(n.a)}, ${new Date(n.date).toLocaleString("de-DE", { timeZone: "Europe/Berlin", weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}` : "–";
+  const topic = env.NTFY_TOPIC ? `<a class="btn" href="ntfy://ntfy.sh/${encodeURIComponent(env.NTFY_TOPIC)}">In ntfy abonnieren</a>` : "";
+  return `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fener-Helfer</title>
+<style>
+:root{--bg:#0b1838;--card:#12224a;--line:#2a3f74;--fg:#eef1fa;--muted:#9aa7c7;--y:#ffd31a;--ok:#3ddc84;--no:#ff6b6b;color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{max-width:520px;margin:0 auto;padding:24px 16px 40px;display:flex;flex-direction:column;gap:16px}
+h1{margin:0;font-size:26px}h1 span{color:var(--y)}p{margin:0;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.label{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}li{display:flex;gap:10px}
+li b{width:22px;flex:none}li.ok b{color:var(--ok)}li.no b{color:var(--no)}small{display:block;color:var(--muted);font-size:13px}
+code{display:block;word-break:break-all;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;font-size:14px;color:var(--y)}
+.btn,button{display:block;text-align:center;background:var(--y);color:var(--bg);border:0;border-radius:12px;padding:13px;font:inherit;font-weight:700;text-decoration:none;cursor:pointer}
+.btn.ghost,button.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}#msg{min-height:1.4em}
+</style></head><body><main>
+<h1>Fener-<span>Helfer</span></h1>
+<p>Läuft jede Minute bei Cloudflare und meldet dir die Fener-Spiele per Push, auch wenn die App zu ist.</p>
+<section class="card"><div class="label">Status</div><ul>${checks}</ul><small>Nächstes Spiel: ${next} · heute ${s.usage && s.usage.day === utcDay() ? s.usage.n : 0} von ${DAILY_LIMIT} Anfragen</small>${s.error ? `<small style="color:var(--no)">Problem: ${esc(s.error)}</small>` : ""}</section>
+<section class="card"><div class="label">1 · Push-Nachrichten</div><p>ntfy aus dem App Store installieren, dann hier tippen:</p>${topic}<button class="ghost" id="test">Test-Nachricht senden</button><p id="msg"></p></section>
+<section class="card"><div class="label">2 · Mit der Fener-App verbinden</div><p>Adresse kopieren und in der Fener-App unter Live → Hintergrund-Helfer einfügen.</p><code id="u">${esc(origin)}</code><button id="copy">Adresse kopieren</button></section>
+<script>
+document.getElementById("copy").onclick=function(){var t=document.getElementById("u").textContent,b=this;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){b.textContent="Kopiert ✓"},function(){var r=document.createRange();r.selectNode(document.getElementById("u"));getSelection().removeAllRanges();getSelection().addRange(r);b.textContent="Markiert – jetzt Kopieren antippen"})};
+document.getElementById("test").onclick=function(){var m=document.getElementById("msg");m.textContent="Sende …";fetch("/test").then(function(r){return r.json()}).then(function(j){m.textContent=j.ok?"Gesendet! Schau in die ntfy-App.":(j.error||"Hat nicht geklappt.")},function(){m.textContent="Hat nicht geklappt."})};
+</script></main></body></html>`;
 }
 
 // ---------------------------------------------------------------------------
