@@ -568,9 +568,9 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
         <p class="hint" style="margin-top:6px"><b id="use-txt" style="color:var(--fg)"></b></p>
         <p class="label" style="margin-top:12px">Wie oft während eines Fener-Spiels?</p>
         <div class="seg" id="rl-int">
+          <button type="button" data-i="max" aria-pressed="true">Maximal</button>
+          <button type="button" data-i="normal" aria-pressed="false">Normal</button>
           <button type="button" data-i="spar" aria-pressed="false">Sparsam</button>
-          <button type="button" data-i="normal" aria-pressed="true">Normal</button>
-          <button type="button" data-i="oft" aria-pressed="false">Häufig</button>
         </div>
         <label class="toggle" for="rl-others-on" style="margin-top:10px">
           <input type="checkbox" id="rl-others-on">
@@ -580,7 +580,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
         <p class="label" style="margin-top:12px">Plan für die nächsten 7 Tage</p>
         <ul class="rl-plan" id="use-plan"></ul>
         <p class="hint" id="use-week"></p>
-        <p class="hint" style="margin-top:6px">Abgefragt wird nur rund um Fener-Spiele: 5 Minuten vor Anpfiff bis Abpfiff, in der Halbzeit seltener. Wird das Budget knapp, fragt die App automatisch seltener. 5 Anfragen bleiben immer als Reserve.</p>
+        <p class="hint" style="margin-top:6px">Abgefragt wird nur rund um Fener-Spiele: 5 Minuten vor Anpfiff bis Abpfiff, in der Halbzeit seltener. Nach Abpfiff trägt die App das Ergebnis automatisch in deine Saison ein. 5 Anfragen bleiben immer als Reserve.</p>
       </section>
 
       <section class="panel">
@@ -2116,9 +2116,9 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
   var LEAGUES = { 203: "Süper Lig", 2: "Champions League", 206: "Türkiye Kupası" };
   var PAGES_URL = "https://5kgfb8k2zn-lang.github.io/Fener-Simulator-/";
   var DAILY_LIMIT = 100, CAP = 95;            // 5 Anfragen bleiben immer als Reserve
-  var INTERVALS = { spar: 180, normal: 120, oft: 80 };
+  var INTERVALS = { spar: 180, normal: 120, max: 0 };  // max: Intervall wird aus dem Restbudget berechnet
   var STOP = ["FT", "AET", "PEN", "PST", "CANC", "ABD", "AWD", "WO"];
-  if (!prefs.rlInt) prefs.rlInt = "normal";
+  if (!prefs.rlInt || prefs.rlInt === "oft") prefs.rlInt = "max";
   var RL = { key: load("fb.apikey", ""), others: [], fbFx: null, nextFx: null, lastFx: null, err: null, loading: false, quota: null, lastListAt: 0, teamId: load("fb.apiteam", null), timer: null, updated: null, lineups: {}, lineupTry: {}, syncing: false, syncMsg: "", usage: load("fb.apiusage", { day: "", n: 0 }), nextPollAt: null, info: "" };
 
   function utcDay() { return new Date().toISOString().slice(0, 10); }
@@ -2200,6 +2200,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
       save("fb.real.v1", REAL);
       var sims = S.fixtures.filter(function (f) { return f.done && !f.real; }).length;
       if (!sims && S.mode !== "start") initSeason("current");
+      else if (S.mode !== "start") autoApplyReal();
       RL.syncMsg = "Echter Stand geladen: " + fx.filter(function (f) { return FINISHED.indexOf(f.st) >= 0; }).length + " gespielte Fener-Spiele, Tabelle mit " + table.length + " Teams." + (sims && S.mode !== "start" ? " Im Tab „Saison“ kannst du ihn übernehmen." : "");
     }).catch(function (e) { RL.syncMsg = "Echter Stand: " + friendlyErr(e); })
       .then(function () { RL.syncing = false; if (currentTab === "real") { renderReal(); scheduleReal(); } if (currentTab === "season" && !liveActive) renderSeason(); });
@@ -2236,7 +2237,12 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
           RL.fbFx = res[0] || null;
           if (RL.fbFx) {
             storeLive(RL.fbFx);
-            if (FINISHED.indexOf(RL.fbFx.fixture.status.short) >= 0) setTimeout(function () { syncReal(false); }, Math.max(60000, kick(w) + 121 * 60000 - Date.now()));
+            if (FINISHED.indexOf(RL.fbFx.fixture.status.short) >= 0) {
+              var r = applyRealToSeason(RL.fbFx);
+              if (r) RL.info = "Abpfiff! Automatisch in die Saison eingetragen: " + r.sx.rd + " " + r.fg + ":" + r.og + " aus Fener-Sicht.";
+              // Tabelle der anderen Teams kurz danach nachladen (2 Anfragen)
+              setTimeout(function () { syncReal(false); }, Math.max(60000, kick(w) + 121 * 60000 - Date.now()));
+            }
           }
         });
       });
@@ -2263,16 +2269,20 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
       .then(function () { RL.loading = false; renderReal(); scheduleReal(); });
   }
 
-  // Wie oft während eines Spiels abgefragt wird – passt sich automatisch an das Restbudget an
+  // Wie oft während eines Spiels abgefragt wird.
+  // "max": das ganze Tageslimit wird gleichmäßig auf die restliche Spielzeit verteilt (ca. alle 70 s).
   function pollInterval(w) {
-    var base = INTERVALS[prefs.rlInt] || 120;
-    var endT = kick(w) + 125 * 60000;
-    var left = CAP - usedToday() - 3; // 3 für Abgleich + Aufstellung zurückhalten
-    var secsLeft = Math.max(300, (endT - Date.now()) / 1000);
-    var interval = base;
-    if (left <= 0) return null;
-    if (secsLeft / base > left) interval = Math.ceil(secsLeft / left);
     var st = RL.fbFx && RL.fbFx.fixture.status.short;
+    var extraTime = ["ET", "BT", "P"].indexOf(st) >= 0;
+    var endT = kick(w) + (extraTime ? 170 : 125) * 60000;
+    var secsLeft = Math.max(300, (endT - Date.now()) / 1000);
+    if (!extraTime && st !== "2H") secsLeft -= 15 * 60;            // Halbzeit kostet fast nichts
+    var reserve = 3 + (prefs.rlOthers ? Math.ceil(secsLeft / 600) : 0); // Abgleich nach Abpfiff + andere Spiele
+    var left = CAP - usedToday() - reserve;
+    if (left <= 0) return null;
+    var base = INTERVALS[prefs.rlInt];
+    var interval = base ? base : Math.max(30, Math.ceil(secsLeft / left));
+    if (secsLeft / interval > left) interval = Math.ceil(secsLeft / left);
     if (st === "HT") interval = Math.max(interval, 7 * 60);
     if (Date.now() < kick(w)) interval = Math.max(60, Math.min(interval, (kick(w) - Date.now()) / 1000 + 30));
     return interval;
@@ -2305,6 +2315,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
 
   // Geschätzter Verbrauch pro Fener-Spiel
   function perMatchEstimate() {
+    if (prefs.rlInt === "max") return CAP - 3;
     var iv = INTERVALS[prefs.rlInt] || 120;
     var polls = Math.ceil((125 - 15) * 60 / iv) + 2;   // Halbzeit wird fast übersprungen
     var extra = 2 + 2;                                   // Aufstellung + Abgleich nach Abpfiff
@@ -2382,12 +2393,10 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     if (!sx) return "";
     return '<button class="ghost" type="button" data-sync="' + f.fixture.id + '">Echtes Ergebnis in die Saison übernehmen (' + esc(sx.rd) + ")</button>";
   }
-  document.addEventListener("click", function (e) {
-    var b = e.target.closest("[data-sync]"); if (!b) return;
-    var id = +b.dataset.sync;
-    var f = [RL.fbFx, RL.lastFx].concat(RL.others).filter(function (x) { return x && x.fixture.id === id; })[0];
-    if (!f) return;
-    var sx = findSeasonFixture(f); if (!sx) return;
+  // Echtes Endergebnis in die Saison eintragen (gibt das Saisonspiel zurück oder null)
+  function applyRealToSeason(f) {
+    if (!S || S.mode === "start" || !f || FINISHED.indexOf(f.fixture.status.short) < 0 || f.goals.home === null) return null;
+    var sx = findSeasonFixture(f); if (!sx) return null;
     var fbHome = isFb(f.teams.home.name);
     var fg = fbHome ? f.goals.home : f.goals.away, og = fbHome ? f.goals.away : f.goals.home;
     var pens = null;
@@ -2395,7 +2404,21 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     MANUAL[fxKey(sx)] = { fg: fg, og: og, pens: pens }; save("fb.manual.v1", MANUAL);
     sx.real = true;
     applyFixtureResult(sx.id, { fg: fg, og: og, pens: pens }, null);
-    b.outerHTML = '<p class="hint">Übernommen: ' + esc(sx.rd) + " " + fg + ":" + og + " aus Fener-Sicht.</p>";
+    return { sx: sx, fg: fg, og: og };
+  }
+  // Alle beendeten echten Spiele, die in der Saison noch offen sind, automatisch eintragen
+  function autoApplyReal() {
+    var n = 0, last = null;
+    realList().forEach(function (a) { var r = applyRealToSeason(fromReal(a)); if (r) { n++; last = r; } });
+    if (n) RL.info = (n === 1 ? "Automatisch eingetragen: " + last.sx.rd + " " + last.fg + ":" + last.og + " aus Fener-Sicht." : n + " echte Ergebnisse automatisch in die Saison eingetragen.");
+    return n;
+  }
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-sync]"); if (!b) return;
+    var id = +b.dataset.sync;
+    var f = [RL.fbFx, RL.lastFx].concat(RL.others).filter(function (x) { return x && x.fixture.id === id; })[0];
+    var r = applyRealToSeason(f); if (!r) return;
+    b.outerHTML = '<p class="hint">Übernommen: ' + esc(r.sx.rd) + " " + r.fg + ":" + r.og + " aus Fener-Sicht.</p>";
   });
 
   // ---------- Echte Aufstellung ----------
@@ -2478,7 +2501,10 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     $("rl-others-on").checked = !!prefs.rlOthers;
     $("use-bar").style.width = Math.min(100, used / DAILY_LIMIT * 100) + "%";
     $("use-txt").textContent = used + " von " + DAILY_LIMIT + " heute verbraucht";
-    $("use-est").textContent = { spar: "Alle 3 Minuten. ", normal: "Alle 2 Minuten. ", oft: "Alle 80 Sekunden. " }[prefs.rlInt] + "Pro Fener-Spiel höchstens ca. " + est + " Anfragen (meist weniger). An Tagen ohne Fener-Spiel höchstens 2 (ein Abgleich, wenn du die App öffnest).";
+    $("use-est").textContent = (prefs.rlInt === "max"
+      ? "Nutzt am Spieltag das ganze Tageslimit, verteilt auf die Spielzeit: etwa alle 70 Sekunden, Tore erscheinen im Schnitt ca. 1 Minute später. "
+      : { spar: "Alle 3 Minuten, Tore im Schnitt ca. 2 Minuten später. ", normal: "Alle 2 Minuten, Tore im Schnitt ca. 1,5 Minuten später. " }[prefs.rlInt] + "Pro Fener-Spiel höchstens ca. " + est + " Anfragen. ") +
+      "An Tagen ohne Fener-Spiel höchstens 2 (ein Abgleich, wenn du die App öffnest).";
     // Plan für die nächsten 7 Tage aus dem Spielplan
     var now = Date.now(), end = now + 7 * 86400000, rows = [];
     var list = REAL ? realList().filter(function (a) { return kick(a) > now - 150 * 60000 && kick(a) < end && STOP.indexOf(a.st) < 0; }).map(function (a) { return { t: new Date(a.date), label: (isFb(a.h) ? "vs. " + a.a : "@ " + a.h), time: true }; })
@@ -2487,7 +2513,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
       rows.push("<li><span>" + x.t.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" }) + (x.time ? " · " + x.t.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) : "") + "</span><span>" + esc(x.label) + "</span><b>≈ " + est + "</b></li>");
     });
     $("use-plan").innerHTML = rows.length ? rows.join("") : '<li><span>Kein Fener-Spiel in den nächsten 7 Tagen</span><span></span><b>≈ 0–2/Tag</b></li>';
-    $("use-week").textContent = list.length ? "Diese Woche: " + list.length + (list.length === 1 ? " Spiel" : " Spiele") + ", höchstens " + est + " Anfragen an einem Tag. Das Tageslimit von 100 wird nie erreicht." : "";
+    $("use-week").textContent = list.length ? "Diese Woche: " + list.length + (list.length === 1 ? " Spiel" : " Spiele") + ", höchstens " + est + " Anfragen an einem Tag. Das Tageslimit von 100 wird nie überschritten." : "";
   }
 
   function renderReal() {
