@@ -2908,7 +2908,8 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     if (RL.info) html += '<div class="msg">' + esc(RL.info) + "</div>";
     if (RL.helper && RL.helperState) {
       var hs = RL.helperState;
-      if (hs.error) html += '<div class="msg err"><b>Der Helfer meldet ein Problem</b>' + esc(hs.error) + "</div>";
+      if (hs.error && /invalid api key|api key|token/i.test(hs.error)) html += '<div class="msg err"><b>Der API-Schlüssel im Helfer stimmt nicht</b>Bei Cloudflare ist unter API_KEY ein falscher Schlüssel eingetragen. So korrigierst du ihn: dash.cloudflare.com → Workers & Pages → fener-helfer → Settings → Variables and Secrets → bei API_KEY auf Bearbeiten (Stift) → deinen Schlüssel von dashboard.api-football.com einfügen → Speichern bzw. Deploy. Innerhalb von 1–2 Minuten verschwindet diese Meldung.<br><small style="color:var(--muted)">Original: ' + esc(hs.error) + "</small></div>";
+      else if (hs.error) html += '<div class="msg err"><b>Der Helfer meldet ein Problem</b>' + esc(hs.error) + "</div>";
       else if (!hs.apiKey) html += '<div class="msg err"><b>Helfer: API_KEY fehlt</b>Trage den Schlüssel in Cloudflare unter Settings → Variables and Secrets ein.</div>';
       else if (!hs.syncedAt) html += '<div class="msg">Helfer verbunden. Er lädt den Spielplan beim nächsten Durchlauf (innerhalb einer Minute).</div>';
       if (hs.apiKey && !hs.push) html += '<div class="msg err"><b>Push ist noch nicht eingerichtet</b>Trage in Cloudflare das Secret NTFY_TOPIC ein.</div>';
