@@ -313,6 +313,19 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
 .pl.sel .sw { background: var(--yellow); color: var(--navy); border-color: var(--yellow); }
 .pl.sel input { border-color: var(--yellow); }
 .statlist { list-style: none; margin: 0; padding: 0; }
+.statlist.rec li { grid-template-columns: 1fr auto; }
+.statlist.rec li span:last-child { text-align: right; }
+.statlist.rec small { display: block; color: var(--muted); font-size: 12px; }
+.derby { border-top: 1px solid var(--navy-3); padding: 10px 0; display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; }
+.derby:first-child { border-top: 0; }
+.derby b { font-weight: 700; }
+.derby .wdl { font-family: var(--font-display); font-weight: 800; font-size: 18px; font-variant-numeric: tabular-nums; }
+.derby .wdl i { font-style: normal; }
+.derby .bar3 { grid-column: 1 / -1; display: flex; height: 6px; border-radius: 3px; overflow: hidden; gap: 2px; }
+.derby .bar3 span { display: block; }
+.derby small { grid-column: 1 / -1; color: var(--muted); font-size: 12px; }
+.pl .rt.up { color: var(--win); } .pl .rt.down { color: var(--loss); }
+.seg#season-tabs button { padding: 10px 2px; font-size: 13px; }
 .statlist li { display: grid; grid-template-columns: 1fr 5ch 5ch 5ch; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--navy-3); font-variant-numeric: tabular-nums; align-items: center; }
 .statlist li.hd { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 .statlist li span:not(:first-child) { text-align: right; }
@@ -507,6 +520,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
         <button type="button" data-st="tbl" aria-pressed="false">Tabelle</button>
         <button type="button" data-st="cl" aria-pressed="false">Europa</button>
         <button type="button" data-st="pl" aria-pressed="false">Spieler</button>
+        <button type="button" data-st="rec" aria-pressed="false">Rekorde</button>
       </div>
 
       <section class="panel" id="st-fix">
@@ -524,6 +538,14 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
         <ul class="path" id="cl-path"></ul>
         <p class="label" style="margin-top:18px">Türkiye Kupası</p>
         <ul class="path" id="cup-path"></ul>
+      </section>
+      <section class="panel" id="st-rec" hidden>
+        <p class="label">Rekorde aus allen Saisons</p>
+        <ul class="statlist rec" id="records"></ul>
+        <p class="label" style="margin-top:18px">Derby-Bilanz</p>
+        <div id="derbies"></div>
+        <p class="hint" style="margin-top:8px">Zählt alle simulierten Spiele über alle Saisons. Echte Ergebnisse zählen nicht mit.</p>
+        <button class="ghost" type="button" id="reset-records" style="margin-top:10px">Rekorde zurücksetzen</button>
       </section>
       <section class="panel" id="st-pl" hidden>
         <p class="label">Torjäger und Vorlagen</p>
@@ -617,7 +639,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
 
       <header>
         <p class="label">Startelf</p>
-        <p class="hint">Stand 13.10.2026. Zum Tauschen erst ⇄ bei einem Startelf-Spieler, dann bei einem Bankspieler tippen. Namen lassen sich direkt ändern. Die Zahl rechts ist die Spielerstärke. Verletzte und gesperrte Spieler ersetzt die Saison automatisch durch den besten Bankspieler auf derselben Position.</p>
+        <p class="hint">Pfeile neben der Stärke zeigen die aktuelle Form aus den letzten Spielen (↑ stark, ↓ schwach). Stand 13.10.2026. Zum Tauschen erst ⇄ bei einem Startelf-Spieler, dann bei einem Bankspieler tippen. Namen lassen sich direkt ändern. Die Zahl rechts ist die Spielerstärke. Verletzte und gesperrte Spieler ersetzt die Saison automatisch durch den besten Bankspieler auf derselben Position.</p>
       </header>
       <div class="squad" id="xi"></div>
       <p class="label" style="margin-top:6px">Bank</p>
@@ -663,7 +685,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
   // DATEN – eingebauter Stand 13.10.2026 (nach dem 7. Spieltag)
   // Mit Hintergrund-Helfer wird das automatisch durch den echten Stand ersetzt.
   // =====================================================================
-  var APP_VERSION = "20 (14.10.2026)";
+  var APP_VERSION = "21 (14.10.2026)";
   var FB_NAME = "Fenerbahçe";
   var FB_RATING = 84;
   var FB_STADIUM = "Chobani Stadyumu";
@@ -1021,7 +1043,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
         var y = S && S.avail && S.avail[p.n] ? S.avail[p.n].y : null;
         var yTxt = y && (y.SL || y.CL) ? "Gelb: " + (y.SL ? y.SL + " Liga" : "") + (y.SL && y.CL ? ", " : "") + (y.CL ? y.CL + " CL" : "") : "";
         var status = why || yTxt ? '<span class="pl-st' + (why ? " out" : "") + '">' + esc(why ? (why.indexOf("verletzt") === 0 ? "🚑 " : "🟥 ") + why : "🟨 " + yTxt) + "</span>" : "";
-        return '<div class="pl' + (sel ? " sel" : "") + (why ? " is-out" : "") + '"><span class="no">' + p.no + '</span><span class="pos">' + p.pos + '</span><input id="pl-' + key + "-" + i + '" data-k="' + key + '" data-i="' + i + '" value="' + esc(p.n) + '" aria-label="' + p.pos + " Nummer " + p.no + '" autocomplete="off" autocorrect="off" spellcheck="false"><span class="rt">' + (p.r || "") + '</span><button type="button" class="sw" data-swk="' + key + '" data-swi="' + i + '" aria-label="' + esc(p.n) + ' tauschen">⇄</button>' + status + "</div>";
+        return '<div class="pl' + (sel ? " sel" : "") + (why ? " is-out" : "") + '"><span class="no">' + p.no + '</span><span class="pos">' + p.pos + '</span><input id="pl-' + key + "-" + i + '" data-k="' + key + '" data-i="' + i + '" value="' + esc(p.n) + '" aria-label="' + p.pos + " Nummer " + p.no + '" autocomplete="off" autocorrect="off" spellcheck="false"><span class="rt' + (pform(p.n) >= 1 ? " up" : pform(p.n) <= -1 ? " down" : "") + '" title="Form ' + pform(p.n) + '">' + (p.r || "") + (pform(p.n) ? formArrow(pform(p.n)) : "") + '</span><button type="button" class="sw" data-swk="' + key + '" data-swi="' + i + '" aria-label="' + esc(p.n) + ' tauschen">⇄</button>' + status + "</div>";
       }).join("");
     }
     $("xi").innerHTML = rows(squad.xi, "xi");
@@ -1459,6 +1481,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     var best = M.onPitch.slice().sort(function (a, b) { return b.rating - a.rating; })[0];
     var out = { fg: M.fb.g, og: M.op.g, pens: M.pens, scorers: M.fb.scorers.slice(), goals: M.fb.log.slice(), motm: best.n, cards: M.cardLog.slice(), injuries: M.injLog.slice(),
       goalMins: M.goalMins.slice(), penCount: M.penCount, ogCount: M.ogCount,
+      ratings: M.onPitch.map(function (p) { return { n: p.n, r: p.rating }; }),
       st: { fb: { shots: M.fb.shots, sot: M.fb.sot, xg: M.fb.xg, corners: M.fb.corners, fouls: M.fb.fouls, y: M.fb.y, red: M.fb.red, poss: M.fb.poss }, op: { shots: M.op.shots, sot: M.op.sot, xg: M.op.xg, corners: M.op.corners, fouls: M.op.fouls, y: M.op.y, red: M.op.red, poss: M.op.poss } } };
     M.out = out;
     if (M.cfg.dry) return;
@@ -1703,6 +1726,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
   }
 
   // mode: "current" = echter aktueller Stand, "start" = alles auf null ab dem 1. Spieltag
+  function nextSeasonNo() { var n = (load("fb.seasonNo", 0) || 0) + 1; save("fb.seasonNo", n); return n; }
   function initSeason(mode) {
     mode = mode || (S && S.mode) || "current";
     var fresh = mode === "start";
@@ -1732,7 +1756,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
       v: 2, mode: mode, nextId: fixtures.length + 1, fixtures: fixtures, table: table, bg: bg,
       cl: { stage: "league", rank: null, ko: [], out: false, won: false },
       cup: { stage: 0, out: false, won: false, ko: [] },
-      stats: {}, avail: {}, news: [], form: FORM, realAt: REAL && !fresh ? REAL.at : null
+      stats: {}, avail: {}, news: [], form: FORM, pform: {}, streak: { w: 0, u: 0 }, no: nextSeasonNo(), realAt: REAL && !fresh ? REAL.at : null
     };
     addCupFixture();
     sortFixtures();
@@ -1819,13 +1843,33 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     return x < 0.4 ? 1 : x < 0.7 ? 2 + Math.floor(rnd() * 2) : x < 0.93 ? 4 + Math.floor(rnd() * 5) : 10 + Math.floor(rnd() * 8);
   }
   var POS_GROUP = { TW: "TW", RV: "D", LV: "D", IV: "D", ZDM: "M", ZM: "M", ZOM: "M", RA: "A", LA: "A", ST: "A" };
-  // Aufstellung für ein Saisonspiel: Ausfälle werden positionsgerecht von der Bank ersetzt
+  // ---------- Spielerform ----------
+  // Gute Noten machen einen Spieler für die nächsten Spiele stärker, schwache schwächer (−4 bis +4).
+  // Wer nicht spielt, nähert sich langsam wieder seinem Normalwert an.
+  function pform(n) { return S && S.pform && S.pform[n] ? S.pform[n] : 0; }
+  function withForm(p) { var f = pform(p.n); return f ? { no: p.no, pos: p.pos, n: p.n, r: Math.round(((p.r || 76) + f) * 10) / 10, base: p.r, f: f } : p; }
+  function applyPlayerForm(res) {
+    if (!res.ratings || !res.ratings.length) return;
+    if (!S.pform) S.pform = {};
+    var played = {}, team = res.fg > res.og ? 0.25 : res.fg < res.og ? -0.25 : 0;
+    res.ratings.forEach(function (x) { played[x.n] = Math.max(played[x.n] || 0, x.r); });
+    squad.xi.concat(squad.bench).forEach(function (p) {
+      var f = S.pform[p.n] || 0;
+      if (played[p.n] !== undefined) f = 0.7 * f + (played[p.n] - 6.6 + team) * 1.3;
+      else f = f * 0.8;
+      f = Math.max(-4, Math.min(4, Math.round(f * 10) / 10));
+      if (Math.abs(f) < 0.2) delete S.pform[p.n]; else S.pform[p.n] = f;
+    });
+  }
+  function formArrow(f) { return f >= 1.5 ? "↑" : f <= -1.5 ? "↓" : f > 0 ? "↗" : f < 0 ? "↘" : ""; }
+
+  // Aufstellung für ein Saisonspiel: Ausfälle werden positionsgerecht von der Bank ersetzt, Spielerform zählt mit
   function lineupFor(fx) {
     var comp = fx.comp, missing = [];
-    var bench = squad.bench.filter(function (p) { return !outReason(p.n, comp); }).slice();
+    var bench = squad.bench.filter(function (p) { return !outReason(p.n, comp); }).map(withForm);
     var xi = squad.xi.map(function (p) {
       var why = outReason(p.n, comp);
-      if (!why) return p;
+      if (!why) return withForm(p);
       var cands = bench.filter(function (b) { return b.pos === p.pos; });
       if (!cands.length) cands = bench.filter(function (b) { return POS_GROUP[b.pos] === POS_GROUP[p.pos]; });
       if (!cands.length && p.pos !== "TW") cands = bench.filter(function (b) { return b.pos !== "TW"; });
@@ -1868,6 +1912,60 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
       news.push(n + " hat sich verletzt und fällt " + g + (g === 1 ? " Spiel" : " Spiele") + " aus.");
     });
     if (!S._dry) S.news = news;
+  }
+
+  // ---------- Rekorde und Derby-Bilanz (über alle simulierten Saisons) ----------
+  var RECORDS = load("fb.records.v1", null) || { seasons: 0, titles: 0, cl: 0, cup: 0, triple: 0, bestWin: null, worstLoss: null, winStreak: null, unbeaten: null, mostGoalsSeason: null, mostGoalsMatch: null, bestPoints: null, worstPoints: null, bestPlace: null };
+  var DERBY = load("fb.derby.v1", null) || {};
+  function saveRecords() { save("fb.records.v1", RECORDS); save("fb.derby.v1", DERBY); }
+  function seasonLabel() { return "Saison " + (S.no || 1); }
+  function better(rec, val, cmp) { return !rec || cmp(val, rec); }
+  function trackRecords(fx, res) {
+    var fg = fx.fg, og = fx.og, diff = fg - og, when = seasonLabel() + ", " + fmtDate(fx.d);
+    var sc = fx.v === "A" ? og + ":" + fg : fg + ":" + og;
+    var label = fx.v === "A" ? fx.opp + " – Fenerbahçe" : "Fenerbahçe – " + fx.opp;
+    if (diff > 0 && better(RECORDS.bestWin, { d: diff, g: fg }, function (a, b) { return a.d > b.d || (a.d === b.d && a.g > b.g); })) RECORDS.bestWin = { d: diff, g: fg, sc: sc, txt: label, when: when };
+    if (diff < 0 && better(RECORDS.worstLoss, { d: -diff, g: og }, function (a, b) { return a.d > b.d || (a.d === b.d && a.g > b.g); })) RECORDS.worstLoss = { d: -diff, g: og, sc: sc, txt: label, when: when };
+    // Serien innerhalb der Saison
+    if (!S.streak) S.streak = { w: 0, u: 0 };
+    var won = diff > 0 || (diff === 0 && fx.pens && fx.pens.fb > fx.pens.op);
+    S.streak.w = won ? S.streak.w + 1 : 0;
+    S.streak.u = diff >= 0 ? S.streak.u + 1 : 0;
+    if (better(RECORDS.winStreak, S.streak.w, function (a, b) { return a > b.n; }) && S.streak.w >= 2) RECORDS.winStreak = { n: S.streak.w, when: seasonLabel() + ", bis " + fmtDate(fx.d) };
+    if (better(RECORDS.unbeaten, S.streak.u, function (a, b) { return a > b.n; }) && S.streak.u >= 2) RECORDS.unbeaten = { n: S.streak.u, when: seasonLabel() + ", bis " + fmtDate(fx.d) };
+    // Meiste Tore eines Spielers in einem Spiel
+    var cnt = {};
+    (res.goals || []).forEach(function (g) { cnt[g.n] = (cnt[g.n] || 0) + 1; });
+    Object.keys(cnt).forEach(function (n) {
+      if (cnt[n] >= 2 && better(RECORDS.mostGoalsMatch, cnt[n], function (a, b) { return a > b.n; })) RECORDS.mostGoalsMatch = { n: cnt[n], who: n, txt: label + " " + sc, when: when };
+    });
+    // Derby-Bilanz
+    var t = findTeam(fx.opp);
+    if (t && t.rival) {
+      var dd = DERBY[fx.opp] || (DERBY[fx.opp] = { p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, last: [] });
+      dd.p++; dd.gf += fg; dd.ga += og;
+      if (diff > 0) dd.w++; else if (diff === 0) dd.d++; else dd.l++;
+      dd.last.unshift({ r: diff > 0 ? "w" : diff === 0 ? "d" : "l", txt: sc + " " + (fx.v === "A" ? "auswärts" : "zu Hause") + ", " + when });
+      dd.last = dd.last.slice(0, 5);
+    }
+  }
+  function finishSeasonRecords() {
+    if (S.recordsDone) return;
+    var sims = S.fixtures.filter(function (f) { return f.done && !f.real; }).length;
+    if (!sims) return;
+    S.recordsDone = true;
+    var pos = fbPos(), pts = S.table[FB_NAME].pts, label = seasonLabel();
+    RECORDS.seasons++;
+    if (pos === 1) RECORDS.titles++;
+    if (S.cl.won) RECORDS.cl++;
+    if (S.cup.won) RECORDS.cup++;
+    if (pos === 1 && S.cl.won && S.cup.won) RECORDS.triple++;
+    if (better(RECORDS.bestPoints, pts, function (a, b) { return a > b.n; })) RECORDS.bestPoints = { n: pts, when: label + " (Platz " + pos + ")" };
+    if (better(RECORDS.worstPoints, pts, function (a, b) { return a < b.n; })) RECORDS.worstPoints = { n: pts, when: label + " (Platz " + pos + ")" };
+    if (better(RECORDS.bestPlace, pos, function (a, b) { return a < b.n; })) RECORDS.bestPlace = { n: pos, when: label };
+    var top = topScorer();
+    if (top && better(RECORDS.mostGoalsSeason, top.g, function (a, b) { return a > b.n; })) RECORDS.mostGoalsSeason = { n: top.g, who: top.n, when: label };
+    saveRecords();
   }
 
   function addResult(team, gf, ga) {
@@ -1928,6 +2026,8 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     fx.done = true; fx.fg = res.fg; fx.og = res.og; fx.pens = res.pens || null; fx.scorers = res.scorers || [];
     if (!S._dry) addStats(res);
     applyAvail(fx, res);
+    if (!S._dry) applyPlayerForm(res);
+    if (!S._dry && !fx.real) { trackRecords(fx, res); saveRecords(); }
     predCache = {};
 
     if (fx.comp === "SL") {
@@ -1959,6 +2059,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
       else if (S.cup.stage === CUP_STAGES.length - 1) S.cup.won = true;
       else { S.cup.stage++; addCupFixture(); sortFixtures(); }
     }
+    if (!S._dry && !nextFixture()) finishSeasonRecords();
     saveSeason();
   }
 
@@ -2155,6 +2256,9 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
           var lu = lineupFor(nx), out = "";
           if (lu.missing.length) out += '<p class="note miss"><b>Fehlt:</b> ' + lu.missing.map(function (m) { return esc(m.n) + " (" + esc(m.why) + ")" + (m.by ? " → " + esc(lastName(m.by)) : ""); }).join(", ") + "</p>";
           if (S.news && S.news.length) out += '<p class="note">' + S.news.map(esc).join(" ") + "</p>";
+          var forms = lu.xi.filter(function (p) { return p.f; }).sort(function (a, b) { return b.f - a.f; });
+          var hot = forms.filter(function (p) { return p.f >= 1.5; }).slice(0, 2), cold = forms.filter(function (p) { return p.f <= -1.5; }).slice(-2);
+          if (hot.length || cold.length) out += '<p class="note">' + (hot.length ? "In Form: " + hot.map(function (p) { return esc(lastName(p.n)) + " ↑"; }).join(", ") : "") + (hot.length && cold.length ? " · " : "") + (cold.length ? "Formtief: " + cold.map(function (p) { return esc(lastName(p.n)) + " ↓"; }).join(", ") : "") + "</p>";
           if (tiredness(nx)) out += '<p class="note">Englische Woche: Das letzte Spiel ist höchstens 3 Tage her, das Team ist etwas müde.</p>';
           return out;
         })() +
@@ -2183,6 +2287,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     $("st-tbl").hidden = seasonTab !== "tbl";
     $("st-cl").hidden = seasonTab !== "cl";
     $("st-pl").hidden = seasonTab !== "pl";
+    $("st-rec").hidden = seasonTab !== "rec";
 
     if (seasonTab === "fix") renderFixtures(nx);
     if (seasonTab === "tbl") {
@@ -2194,6 +2299,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     }
     if (seasonTab === "cl") renderPaths();
     if (seasonTab === "pl") renderPlayerStats();
+    if (seasonTab === "rec") renderRecords();
     renderOdds();
 
     $("season-src").textContent = (S.mode === "start" ? "Modus ab 1. Spieltag: alle Teams starten bei 0, echte Ergebnisse werden ignoriert, nur die Termine sind echt. " : "") + (S.realAt
@@ -2236,6 +2342,42 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
       applyFixtureResult(f.id, { fg: fg, og: og, pens: pens }, null);
       editId = null; renderSeason();
     }
+  });
+
+  function renderRecords() {
+    var R = RECORDS;
+    function row(label, val, sub) { return "<li><span>" + esc(label) + (sub ? "<small>" + esc(sub) + "</small>" : "") + "</span><b>" + esc(val) + "</b></li>"; }
+    var rows = [
+      row("Gespielte Saisons", String(R.seasons)),
+      row("Meistertitel", String(R.titles)),
+      row("Champions-League-Siege", String(R.cl)),
+      row("Pokalsiege", String(R.cup)),
+      row("Triple", String(R.triple)),
+      R.bestPoints ? row("Meiste Punkte in einer Saison", String(R.bestPoints.n), R.bestPoints.when) : "",
+      R.worstPoints ? row("Wenigste Punkte", String(R.worstPoints.n), R.worstPoints.when) : "",
+      R.bestWin ? row("Höchster Sieg", R.bestWin.sc || "", R.bestWin.txt + " · " + R.bestWin.when) : "",
+      R.worstLoss ? row("Höchste Niederlage", R.worstLoss.sc || "", R.worstLoss.txt + " · " + R.worstLoss.when) : "",
+      R.winStreak ? row("Längste Siegesserie", R.winStreak.n + " Spiele", R.winStreak.when) : "",
+      R.unbeaten ? row("Längste Serie ohne Niederlage", R.unbeaten.n + " Spiele", R.unbeaten.when) : "",
+      R.mostGoalsSeason ? row("Meiste Tore in einer Saison", R.mostGoalsSeason.n + " Tore", R.mostGoalsSeason.who + " · " + R.mostGoalsSeason.when) : "",
+      R.mostGoalsMatch ? row("Meiste Tore in einem Spiel", R.mostGoalsMatch.n + " Tore", R.mostGoalsMatch.who + " · " + R.mostGoalsMatch.txt + " · " + R.mostGoalsMatch.when) : ""
+    ].join("");
+    $("records").innerHTML = rows;
+    var names = ["Galatasaray", "Beşiktaş", "Trabzonspor"];
+    $("derbies").innerHTML = names.map(function (n) {
+      var d = DERBY[n];
+      if (!d || !d.p) return '<div class="derby"><b>' + esc(n) + '</b><span class="hint">noch kein Spiel</span></div>';
+      var pw = d.w / d.p * 100, pd = d.d / d.p * 100;
+      return '<div class="derby"><b>' + esc(n) + '</b><span class="wdl"><i style="color:var(--win)">' + d.w + '</i>-<i>' + d.d + '</i>-<i style="color:var(--loss)">' + d.l + '</i></span>' +
+        '<div class="bar3"><span style="width:' + pw + '%;background:var(--win)"></span><span style="width:' + pd + '%;background:var(--draw)"></span><span style="width:' + (100 - pw - pd) + '%;background:var(--loss)"></span></div>' +
+        "<small>" + d.p + " Spiele · Tore " + d.gf + ":" + d.ga + (d.last.length ? " · zuletzt " + esc(d.last[0].txt) : "") + "</small></div>";
+    }).join("");
+  }
+  $("reset-records").addEventListener("click", function () {
+    armButton(this, "Rekorde zurücksetzen", "Alle Rekorde löschen? Nochmal tippen", function () {
+      RECORDS = { seasons: 0, titles: 0, cl: 0, cup: 0, triple: 0, bestWin: null, worstLoss: null, winStreak: null, unbeaten: null, mostGoalsSeason: null, mostGoalsMatch: null, bestPoints: null, worstPoints: null, bestPlace: null };
+      DERBY = {}; saveRecords(); renderRecords();
+    });
   });
 
   function topScorer() {

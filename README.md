@@ -22,6 +22,9 @@ Eine Fußball-Simulations-App nur für Fenerbahçe-Spiele. Sie besteht aus einer
 - **Torjubel mit Ton**, Verletzungen, Spielerstatistik der Saison (Tore, Vorlagen, Spieler des Spiels).
 - **Echte Ergebnisse von Hand eintragen**: Offenes Spiel im Spielplan antippen.
 - **Tippspiel** für die nächsten echten Fener-Spiele.
+- **Rekorde** über alle simulierten Saisons: Titel, Punkte, höchster Sieg und höchste Niederlage, Serien, Torschützen.
+- **Derby-Bilanz** gegen Galatasaray, Beşiktaş und Trabzonspor über alle Saisons.
+- **Spielerform:** Gute Noten machen Spieler für die nächsten Spiele stärker, schwache schwächer (sichtbar im Kader und beim nächsten Spiel).
 
 ## Simulation: so realistisch wie möglich
 - Die Engine ist auf Süper-Lig-Durchschnittswerte abgestimmt: ca. 2,8 Tore pro Spiel, 12 Schüsse und 5 Ecken pro Team, 34 % aufs Tor, 2,2 Gelbe und 0,13 Platzverweise pro Team, Heimbilanz ca. 44/26/30.
