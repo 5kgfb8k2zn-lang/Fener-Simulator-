@@ -41,3 +41,6 @@ Der Tab „Live“ zeigt echte Spielstände von Fenerbahçe, der Süper Lig, der
 3. Den Key im Tab „Live“ einfügen. Er wird nur im Browser gespeichert und nie ins Repository geschrieben.
 
 **Abfragen nach Spielplan:** Die App fragt nur rund um Fener-Spiele ab. Im Standard „Maximal“ nutzt sie am Spieltag das ganze Tageslimit (etwa alle 70 Sekunden, Tore im Schnitt ca. 1 Minute später). Nach Abpfiff trägt sie das Ergebnis automatisch in die Saison ein. Abgefragt wird von 5 Minuten vor Anpfiff bis Abpfiff, in der Halbzeit seltener. Im Test brauchte ein ganzer Spieltag etwa 50 Anfragen, an anderen Tagen braucht die App höchstens 2. Es gibt einen Zähler pro Tag, 5 Anfragen bleiben immer als Reserve, und die App drosselt sich selbst, wenn das Budget knapp wird. Nach Abpfiff lässt sich das echte Ergebnis mit einem Tipp in die Saison-Simulation übernehmen.
+
+## Hintergrund-Helfer (Push bei geschlossener App)
+Im Ordner `helfer/` liegt ein Cloudflare Worker. Er fragt API-Football rund um Fener-Spiele etwa jede Minute ab und schickt über die App ntfy Push-Nachrichten bei Anpfiff, Toren, Roten Karten, Halbzeit und Abpfiff. Ist der Helfer in der App eingetragen, holt die App alles von ihm und verbraucht selbst keine Anfragen mehr. Die Einrichtung steht Schritt für Schritt in `helfer/ANLEITUNG.md`.

@@ -546,6 +546,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
         <p class="label">Datenverbrauch</p>
         <div class="bar" style="height:8px;flex:none"><i id="use-bar"></i></div>
         <p class="hint" style="margin-top:6px"><b id="use-txt" style="color:var(--fg)"></b></p>
+        <div id="use-own">
         <p class="label" style="margin-top:12px">Wie oft während eines Fener-Spiels?</p>
         <div class="seg" id="rl-int">
           <button type="button" data-i="max" aria-pressed="true">Maximal</button>
@@ -556,6 +557,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
           <input type="checkbox" id="rl-others-on">
           <span>Andere Spiele mitladen<small>Zeigt parallel laufende Süper-Lig- und CL-Spiele, kostet ca. 12 Anfragen extra pro Spiel</small></span>
         </label>
+        </div>
         <p class="hint" style="margin-top:10px" id="use-est"></p>
         <p class="label" style="margin-top:12px">Plan für die nächsten 7 Tage</p>
         <ul class="rl-plan" id="use-plan"></ul>
@@ -575,7 +577,17 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
           <input id="rl-key" type="password" placeholder="Schlüssel von api-football.com" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="API-Schlüssel">
           <button class="ghost" type="button" id="rl-save">Speichern</button>
         </div>
-        <p class="hint" style="margin-top:8px">Der Schlüssel bleibt nur auf diesem Gerät gespeichert.</p>
+        <p class="hint" style="margin-top:8px">Der Schlüssel bleibt nur auf diesem Gerät gespeichert. Mit Hintergrund-Helfer brauchst du ihn hier nicht.</p>
+      </section>
+
+      <section class="panel">
+        <p class="label">Hintergrund-Helfer (Push bei geschlossener App)</p>
+        <div class="key-row">
+          <input id="rl-helper" type="url" placeholder="https://fener-helfer.….workers.dev" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Adresse des Helfers">
+          <button class="ghost" type="button" id="rl-helper-save">Speichern</button>
+        </div>
+        <button class="ghost" type="button" id="rl-helper-test" style="margin-top:8px">Test-Nachricht senden</button>
+        <p class="hint" style="margin-top:8px" id="rl-helper-msg">Ist der Helfer eingetragen, holt die App alles von ihm und verbraucht selbst keine Anfragen mehr. Leer lassen, um ohne Helfer zu arbeiten.</p>
       </section>
     </div>
 
@@ -2099,7 +2111,41 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
   var INTERVALS = { spar: 180, normal: 120, max: 0 };  // max: Intervall wird aus dem Restbudget berechnet
   var STOP = ["FT", "AET", "PEN", "PST", "CANC", "ABD", "AWD", "WO"];
   if (!prefs.rlInt || prefs.rlInt === "oft") prefs.rlInt = "max";
-  var RL = { key: load("fb.apikey", ""), others: [], fbFx: null, nextFx: null, lastFx: null, err: null, loading: false, quota: null, lastListAt: 0, teamId: load("fb.apiteam", null), timer: null, updated: null, lineups: {}, lineupTry: {}, syncing: false, syncMsg: "", usage: load("fb.apiusage", { day: "", n: 0 }), nextPollAt: null, info: "" };
+  var RL = { key: load("fb.apikey", ""), others: [], fbFx: null, nextFx: null, lastFx: null, err: null, loading: false, quota: null, lastListAt: 0, teamId: load("fb.apiteam", null), timer: null, updated: null, lineups: {}, lineupTry: {}, syncing: false, syncMsg: "", usage: load("fb.apiusage", { day: "", n: 0 }), nextPollAt: null, info: "", helper: String(load("fb.helper", "") || "").replace(/\/+$/, ""), helperState: null };
+
+  // ---------- Hintergrund-Helfer (Cloudflare Worker) ----------
+  function helperGet(path) {
+    return fetch(RL.helper + path, { cache: "no-store" }).then(function (r) { return r.json(); }, function () { throw new Error("HELPER"); });
+  }
+  function applyHelperState(st) {
+    RL.helperState = st;
+    if (st.fixtures && st.fixtures.length && st.syncedAt) {
+      var newSync = !REAL || REAL.at !== st.syncedAt;
+      REAL = { at: st.syncedAt, fixtures: st.fixtures, table: st.table || [] };
+      save("fb.real.v1", REAL);
+      var sims = S.fixtures.filter(function (f) { return f.done && !f.real; }).length;
+      if (newSync && !sims && S.mode !== "start") initSeason("current");
+      else if (S.mode !== "start") autoApplyReal();
+    }
+    var lv = st.live || st.lastLive;
+    RL.fbFx = null;
+    if (lv) {
+      var stt = lv.fixture.status.short, age = Date.now() - Date.parse(lv.fixture.date);
+      if (STOP.indexOf(stt) < 0 || age < 4 * 3600 * 1000) RL.fbFx = lv;
+    }
+    if (st.lineups) Object.keys(st.lineups).forEach(function (k) { RL.lineups[k] = st.lineups[k]; });
+    if (RL.fbFx && FINISHED.indexOf(RL.fbFx.fixture.status.short) >= 0) {
+      var r = applyRealToSeason(RL.fbFx);
+      if (r) RL.info = "Abpfiff! Automatisch in die Saison eingetragen: " + r.sx.rd + " " + r.fg + ":" + r.og + " aus Fener-Sicht.";
+    }
+    RL.updated = new Date();
+  }
+  function helperRefresh() {
+    if (RL.syncing) return Promise.resolve();
+    RL.syncing = true;
+    return helperGet("/state").then(applyHelperState).catch(function (e) { RL.err = e; })
+      .then(function () { RL.syncing = false; if (currentTab === "real") renderReal(); if (currentTab === "season" && !liveActive) renderSeason(); });
+  }
 
   function utcDay() { return new Date().toISOString().slice(0, 10); }
   function usedToday() { if (RL.usage.day !== utcDay()) RL.usage = { day: utcDay(), n: 0 }; return RL.usage.n; }
@@ -2164,6 +2210,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
 
   // Echter Stand: alle Fener-Spiele der Saison + Süper-Lig-Tabelle (2 Anfragen, beim ersten Mal 3)
   function syncReal(force) {
+    if (RL.helper) return helperRefresh();
     if (!RL.key || RL.syncing) return Promise.resolve();
     if (!force && !needSync()) return Promise.resolve();
     RL.syncing = true; RL.syncMsg = "Lade echten Stand …"; if (currentTab === "real") renderReal();
@@ -2188,13 +2235,14 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
 
   function friendlyErr(e) {
     var m = String(e && e.message || e);
+    if (m === "HELPER") return "Der Hintergrund-Helfer ist nicht erreichbar. Prüfe die Adresse unten (sie endet auf .workers.dev) und deine Internetverbindung.";
     if (m === "LIMIT") return "Tageslimit erreicht: Heute sind schon " + usedToday() + " von " + DAILY_LIMIT + " Anfragen verbraucht (5 bleiben als Reserve). Morgen um 2 Uhr nachts (Winterzeit 1 Uhr) geht es weiter.";
     if (/Failed to fetch|NetworkError|Load failed|blocked/i.test(m)) return "Keine Verbindung zu API-Football. Diese Ansicht blockiert fremde Dienste (z. B. die Claude-Vorschau) – öffne die App über " + PAGES_URL;
     return m + (/plan|season/i.test(m) ? " Der Free-Plan erlaubt eventuell nicht die aktuelle Saison." : /key|token/i.test(m) ? " Prüfe den API-Key." : "");
   }
 
   function tryLineup(id, now) {
-    if (RL.lineups[id]) return null;
+    if (RL.helper || RL.lineups[id]) return null;
     var t = RL.lineupTry[id] || { n: 0, at: 0 };
     if (t.n >= 4 || now - t.at < 14 * 60000) return null;
     RL.lineupTry[id] = { n: t.n + 1, at: now };
@@ -2206,6 +2254,12 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
 
   // manual = Knopf "Live aktualisieren" gedrückt
   function refreshReal(manual) {
+    if (RL.helper) {
+      if (RL.loading) return;
+      RL.loading = true; RL.err = null; RL.info = ""; renderReal();
+      helperRefresh().then(function () { RL.loading = false; renderReal(); scheduleReal(); });
+      return;
+    }
     if (!RL.key || RL.loading) { renderReal(); return; }
     if (!REAL) { if (!RL.syncing) syncReal(true).then(function () { if (REAL) refreshReal(false); }); return; }
     var now = Date.now(), w = windowFx(), n = nextRealFx();
@@ -2270,18 +2324,19 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
 
   function scheduleReal() {
     clearTimeout(RL.timer); RL.nextPollAt = null;
-    if (currentTab !== "real" || document.hidden || !RL.key || !REAL) return;
+    if (currentTab !== "real" || document.hidden || (!RL.key && !RL.helper) || !REAL) return;
     if (RL.err && String(RL.err.message) === "LIMIT") return;
     var now = Date.now(), w = windowFx(), delay;
     if (w) {
       var st = RL.fbFx && RL.fbFx.fixture.status.short;
       if (st && STOP.indexOf(st) >= 0) return;
-      var iv = pollInterval(w); if (!iv) return;
-      delay = iv * 1000;
+      if (RL.helper) delay = 30000; // vom Helfer lesen kostet nichts
+      else { var iv = pollInterval(w); if (!iv) return; delay = iv * 1000; }
     } else {
       var n = nextRealFx(); if (!n) return;
       var k = kick(n), wake = k - 5 * 60000;
-      if (!RL.lineups[n.id] && (RL.lineupTry[n.id] || { n: 0 }).n < 4) {
+      if (RL.helper) { if (!RL.lineups[n.id]) wake = Math.min(wake, now >= k - 60 * 60000 ? now + 5 * 60000 : k - 60 * 60000); }
+      else if (!RL.lineups[n.id] && (RL.lineupTry[n.id] || { n: 0 }).n < 4) {
         var lt = (RL.lineupTry[n.id] || { at: 0 }).at;
         var lineupAt = Math.max(k - 60 * 60000, lt + 15 * 60000);
         if (lineupAt < wake) wake = lineupAt;
@@ -2476,12 +2531,15 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
   });
 
   function renderUsage() {
-    var used = usedToday(), est = perMatchEstimate();
+    var hs = RL.helper && RL.helperState;
+    var used = hs && hs.usage && hs.usage.day === utcDay() ? hs.usage.n : RL.helper ? 0 : usedToday(), est = RL.helper ? CAP - 3 : perMatchEstimate();
+    $("use-own").hidden = !!RL.helper;
     setSeg("rl-int", "i", prefs.rlInt);
     $("rl-others-on").checked = !!prefs.rlOthers;
     $("use-bar").style.width = Math.min(100, used / DAILY_LIMIT * 100) + "%";
-    $("use-txt").textContent = used + " von " + DAILY_LIMIT + " heute verbraucht";
-    $("use-est").textContent = (prefs.rlInt === "max"
+    $("use-txt").textContent = RL.helper ? "Helfer: " + used + " von " + DAILY_LIMIT + " heute verbraucht · die App selbst verbraucht nichts" : used + " von " + DAILY_LIMIT + " heute verbraucht";
+    if (RL.helper) $("use-est").textContent = "Der Helfer fragt am Spieltag etwa jede Minute ab und schickt dir Push-Nachrichten bei Anpfiff, Toren, Roten Karten, Halbzeit und Abpfiff. Die App liest seinen Stand alle 30 Sekunden, solange sie offen ist.";
+    else $("use-est").textContent = (prefs.rlInt === "max"
       ? "Nutzt am Spieltag das ganze Tageslimit, verteilt auf die Spielzeit: etwa alle 70 Sekunden, Tore erscheinen im Schnitt ca. 1 Minute später. "
       : { spar: "Alle 3 Minuten, Tore im Schnitt ca. 2 Minuten später. ", normal: "Alle 2 Minuten, Tore im Schnitt ca. 1,5 Minuten später. " }[prefs.rlInt] + "Pro Fener-Spiel höchstens ca. " + est + " Anfragen. ") +
       "An Tagen ohne Fener-Spiel höchstens 2 (ein Abgleich, wenn du die App öffnest).";
@@ -2499,9 +2557,10 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
   function renderReal() {
     var st = $("rl-status");
     $("rl-key").value = RL.key ? RL.key : "";
+    $("rl-helper").value = RL.helper || "";
     renderTips();
     renderUsage();
-    if (!RL.key) {
+    if (!RL.key && !RL.helper) {
       st.hidden = false;
       st.innerHTML = '<div class="msg"><b>So schaltest du den echten Live-Ticker frei</b><ol class="steps">' +
         '<li>Kostenlos registrieren auf <a href="https://dashboard.api-football.com/register" target="_blank" rel="noopener">dashboard.api-football.com</a> (Free-Plan, 100 Anfragen pro Tag).</li>' +
@@ -2516,6 +2575,13 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     else if (RL.loading) html += '<div class="msg">Lade Live-Daten …</div>';
     if (RL.syncMsg) html += '<div class="msg' + (/Verbindung|API:|Fehler|limit/i.test(RL.syncMsg) ? " err" : "") + '">' + esc(RL.syncMsg) + "</div>";
     if (RL.info) html += '<div class="msg">' + esc(RL.info) + "</div>";
+    if (RL.helper && RL.helperState) {
+      var hs = RL.helperState;
+      if (hs.error) html += '<div class="msg err"><b>Der Helfer meldet ein Problem</b>' + esc(hs.error) + "</div>";
+      else if (!hs.apiKey) html += '<div class="msg err"><b>Helfer: API_KEY fehlt</b>Trage den Schlüssel in Cloudflare unter Settings → Variables and Secrets ein.</div>';
+      else if (!hs.syncedAt) html += '<div class="msg">Helfer verbunden. Er lädt den Spielplan beim nächsten Durchlauf (innerhalb einer Minute).</div>';
+      if (hs.apiKey && !hs.push) html += '<div class="msg err"><b>Push ist noch nicht eingerichtet</b>Trage in Cloudflare das Secret NTFY_TOPIC ein.</div>';
+    }
     st.innerHTML = html; st.hidden = !html;
 
     RL.nextFx = fromReal(nextRealFx());
@@ -2554,6 +2620,21 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
   });
   $("rl-refresh").addEventListener("click", function () { RL.err = null; refreshReal(true); });
   $("rl-sync").addEventListener("click", function () { syncReal(true); });
+  $("rl-helper-save").addEventListener("click", function () {
+    RL.helper = $("rl-helper").value.trim().replace(/\/+$/, "");
+    if (RL.helper && !/^https:\/\//.test(RL.helper)) RL.helper = "https://" + RL.helper;
+    save("fb.helper", RL.helper); RL.err = null; RL.helperState = null; RL.syncMsg = "";
+    $("rl-helper-msg").textContent = RL.helper ? "Gespeichert. Verbinde …" : "Helfer entfernt. Die App fragt wieder selbst ab (mit deinem API-Key).";
+    refreshReal(false);
+    if (RL.helper) setTimeout(function () { $("rl-helper-msg").textContent = RL.err ? friendlyErr(RL.err) : "Verbunden. Die App holt jetzt alles vom Helfer."; }, 2500);
+  });
+  $("rl-helper-test").addEventListener("click", function () {
+    if (!RL.helper) { $("rl-helper-msg").textContent = "Trage zuerst die Adresse des Helfers ein."; return; }
+    $("rl-helper-msg").textContent = "Sende Test-Nachricht …";
+    helperGet("/test").then(function (r) {
+      $("rl-helper-msg").textContent = r.ok ? "Gesendet! Die Nachricht sollte gleich in der ntfy-App erscheinen." : (r.error || "Das hat nicht geklappt.");
+    }, function (e) { $("rl-helper-msg").textContent = friendlyErr(e); });
+  });
   document.addEventListener("click", function (e) {
     var b = e.target.closest("#rl-int button"); if (!b) return;
     prefs.rlInt = b.dataset.i; savePrefs(); renderUsage(); scheduleReal(); renderReal();
@@ -2570,6 +2651,6 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
   refreshSetup();
   showTab("season");
   // Echten Stand nur laden, wenn nötig (nach einem Fener-Spiel oder 1× pro Tag)
-  if (RL.key) syncReal(false);
+  if (RL.key || RL.helper) syncReal(false);
 })();
 </script>
