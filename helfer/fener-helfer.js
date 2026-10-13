@@ -9,7 +9,7 @@
 // Optional: NTFY_SERVER (Standard https://ntfy.sh), APP_URL (Link beim Antippen der Nachricht)
 
 const SEASON = 2026;
-const VERSION = 8;
+const VERSION = 9;
 const FINISHED = ["FT", "AET", "PEN"];
 const STOP = FINISHED.concat(["PST", "CANC", "ABD", "AWD", "WO"]);
 const PLAYING = ["1H", "2H", "HT", "ET", "BT", "P", "LIVE", "INT", "SUSP"];
@@ -205,21 +205,35 @@ function rating(name, league) {
   return r ? r[1] : league === 203 ? 70 : 78;
 }
 function pois(k, l) { let p = Math.exp(-l); for (let i = 1; i <= k; i++) p *= l / i; return p; }
+// Gleiches Erwartungsmodell wie die App (Süper Lig 2022–26 kalibriert):
+// log λ = log 1,415 + Heimvorteil (±0,117) + 1,2·tanh(Δ/36) − 0,0075·(Torwart − 73), Dixon-Coles ρ = −0,11
+const XG = { MU: 1.415, HOME: 0.117, SLOPE: 30, SAT: 1.2, GK: 0.0075, GKREF: 73, RHO: -0.11, RED_OWN: 0.62, RED_OPP: 1.38, EURO_TR: -5 };
+function gStrength(d) { return XG.SAT * Math.tanh(d / (XG.SLOPE * XG.SAT)); }
+// Zeitprofil der Torgefahr (StatsBomb): Anteil, der nach Minute min noch aussteht
+function timeW(h, m) { if (h === 1) return m <= 15 ? 1 : m <= 30 ? 1.09 : m <= 45 ? 1.13 : 1.45; return m <= 60 ? 1.14 : m <= 75 ? 1.11 : m <= 90 ? 1.19 : 1.3; }
+const TIME_SUM = 15 * (1 + 1.09 + 1.13 + 1.14 + 1.11 + 1.19) + 3 * 1.45 + 5.8 * 1.3;
+function restShare(min) { let left = 0; for (let m = min + 1; m <= 90; m++) left += timeW(m <= 45 ? 1 : 2, m); if (min < 45) left += 3 * 1.45; left += 5.8 * 1.3; return left / TIME_SUM; }
 // Wahrscheinlichkeit für Sieg/Remis/Niederlage aus Fener-Sicht.
-// cur = [Fener-Tore, Gegner-Tore] bisher, rest = Anteil der Spielzeit, der noch fehlt (0..1)
-function outcome(fbR, opR, adv, cur, rest, fbReds, opReds) {
-  const d = (fbR - opR + adv) / 22.5;
-  let lf = 1.35 * Math.exp(d) * rest, lo = 1.35 * Math.exp(-d) * rest;
-  lf *= Math.pow(0.8, fbReds || 0) * Math.pow(1.15, opReds || 0);
-  lo *= Math.pow(0.8, opReds || 0) * Math.pow(1.15, fbReds || 0);
+// venue: 1 = Fener zu Hause, -1 = auswärts, 0 = neutral; cur = [Fener-Tore, Gegner-Tore] bisher,
+// rest = Anteil der Torgefahr, der noch fehlt (0..1)
+function outcome(fbR, opR, venue, cur, rest, fbReds, opReds) {
+  const h = venue > 0 ? XG.HOME : venue < 0 ? -XG.HOME : 0, g = gStrength(fbR - opR);
+  let lf = XG.MU * Math.exp(h + g - XG.GK * (opR - XG.GKREF)) * rest, lo = XG.MU * Math.exp(-h - g - XG.GK * (fbR - XG.GKREF)) * rest;
+  const dm = (fbReds || 0) - (opReds || 0), k = Math.min(2, Math.abs(dm));
+  if (dm > 0) { lf *= Math.pow(XG.RED_OWN, k); lo *= Math.pow(XG.RED_OPP, k); }
+  else if (dm < 0) { lf *= Math.pow(XG.RED_OPP, k); lo *= Math.pow(XG.RED_OWN, k); }
   let w = 0, dr = 0, l = 0;
   for (let i = 0; i <= 10; i++) for (let j = 0; j <= 10; j++) {
-    const p = pois(i, lf) * pois(j, lo), f = cur[0] + i, o = cur[1] + j;
+    let tau = 1;
+    if (rest > 0.98) { if (i === 0 && j === 0) tau = 1 - lf * lo * XG.RHO; else if (i === 0 && j === 1) tau = 1 + lf * XG.RHO; else if (i === 1 && j === 0) tau = 1 + lo * XG.RHO; else if (i === 1 && j === 1) tau = 1 - XG.RHO; }
+    const p = pois(i, lf) * pois(j, lo) * Math.max(0, tau), f = cur[0] + i, o = cur[1] + j;
     if (f > o) w += p; else if (f === o) dr += p; else l += p;
   }
   const t = w + dr + l || 1;
   return { w: w / t, d: dr / t, l: l / t };
 }
+// Fener-Stärke im jeweiligen Wettbewerb (Europapokal: Ligaunterschied laut UEFA-Koeffizient)
+function fbRatingFor(league) { return FB_RATING + (league === 203 || league === 206 ? 0 : XG.EURO_TR); }
 function pct(x) { return Math.round(x * 100) + " %"; }
 function berlin(ts, opt) { return new Date(ts).toLocaleString("de-DE", Object.assign({ timeZone: "Europe/Berlin" }, opt)); }
 function berlinDay(ts) { return new Date(ts).toLocaleDateString("en-CA", { timeZone: "Europe/Berlin" }); }
@@ -230,13 +244,13 @@ function liveChance(f) {
   const fbHome = isFb(f.teams.home.name);
   const st = f.fixture.status.short, el = f.fixture.status.elapsed || 0;
   if (["ET", "BT", "P"].indexOf(st) >= 0 || FINISHED.indexOf(st) >= 0) return null;
-  const rest = st === "HT" ? 0.5 : Math.max(0.02, (90 - Math.min(el, 90)) / 90);
+  const rest = Math.max(0.02, restShare(st === "HT" ? 45 : Math.min(el, 90)));
   const opName = fbHome ? f.teams.away.name : f.teams.home.name;
   const gh = f.goals.home || 0, ga = f.goals.away || 0;
   let fbReds = 0, opReds = 0;
   (f.events || []).forEach((e) => { if (e.type === "Card" && /Red|Second/.test(e.detail)) { if (isFb(e.team.name)) fbReds++; else opReds++; } });
   const neutral = /final/i.test(f.league.round || "") && f.league.id !== 203;
-  return outcome(FB_RATING, rating(opName, f.league.id), neutral ? 0 : fbHome ? 3 : -3, fbHome ? [gh, ga] : [ga, gh], rest, fbReds, opReds);
+  return outcome(fbRatingFor(f.league.id), rating(opName, f.league.id), neutral ? 0 : fbHome ? 1 : -1, fbHome ? [gh, ga] : [ga, gh], rest, fbReds, opReds);
 }
 function chanceLine(f) {
   if (!PREFS.chance) return "";
@@ -262,7 +276,7 @@ async function maybeRemind(env, s, now) {
     s.reminded = { [todayFx.id]: true };
     const fbHome = isFb(todayFx.h), opp = fbHome ? todayFx.a : todayFx.h;
     const neutral = /final/i.test(todayFx.round || "") && todayFx.lg !== 203;
-    const c = outcome(FB_RATING, rating(opp, todayFx.lg), neutral ? 0 : fbHome ? 3 : -3, [0, 0], 1, 0, 0);
+    const c = outcome(fbRatingFor(todayFx.lg), rating(opp, todayFx.lg), neutral ? 0 : fbHome ? 1 : -1, [0, 0], 1, 0, 0);
     await push(env, {
       cat: "reminder", title: "Heute spielt Fener! " + berlin(kick(todayFx), { hour: "2-digit", minute: "2-digit" }) + " Uhr",
       message: todayFx.h + " – " + todayFx.a + " (" + (LEAGUE_NAMES[todayFx.lg] || "") + ")\nPrognose: Sieg " + pct(c.w) + " · Remis " + pct(c.d) + " · Niederlage " + pct(c.l) + "\nSchon getippt? Tippspiel in der Fener-App.",
@@ -487,7 +501,7 @@ async function handleTsdb(env, s, w, c) {
   // Verlauf der Siegchance für die Grafik in der App
   if (!s.chanceLog || s.chanceLog.id !== id) {
     const opp = fbHome ? c.a : c.h;
-    const pre = outcome(FB_RATING, rating(opp, c.lg), fbHome ? 3 : -3, [0, 0], 1, 0, 0);
+    const pre = outcome(fbRatingFor(c.lg), rating(opp, c.lg), fbHome ? 1 : -1, [0, 0], 1, 0, 0);
     s.chanceLog = { id: id, pts: [{ m: 0, w: Math.round(pre.w * 100), d: Math.round(pre.d * 100) }] };
   }
   const lastPt = s.chanceLog.pts[s.chanceLog.pts.length - 1];

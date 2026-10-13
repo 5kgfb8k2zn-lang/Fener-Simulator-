@@ -312,6 +312,13 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
 .chart-legend i { display: inline-block; width: 12px; height: 3px; border-radius: 2px; vertical-align: 3px; margin-right: 5px; }
 .sel { width: 100%; background: var(--navy-3); border: 1px solid var(--line); border-radius: 10px; padding: 11px 10px; color: var(--fg); font: inherit; font-size: 16px; }
 .pl-st { grid-column: 3 / -1; font-size: 12.5px; color: var(--muted); margin-top: -2px; }
+.pl-at { grid-column: 3 / -1; font-size: 11.5px; color: var(--muted); margin-top: -4px; letter-spacing: .02em; font-variant-numeric: tabular-nums; }
+.pl-at b { color: var(--fg); font-weight: 700; }
+.units { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.units div { background: var(--card); border-radius: 14px; padding: 10px 8px; text-align: center; min-width: 0; }
+.units b { display: block; font-family: var(--font-display); font-weight: 800; font-size: 22px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.units small { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.units .wide { grid-column: 1 / -1; text-align: left; font-size: 13px; color: var(--muted); padding: 10px 12px; }
 .pl-st.out { color: var(--loss); }
 .pl.is-out input { opacity: .55; text-decoration: line-through; }
 .next .note.miss { color: var(--loss); }
@@ -793,6 +800,7 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
         <span><span class="label" style="display:block;margin:0">Teamstärke</span><span class="hint" id="str-note">aus der Startelf berechnet</span></span>
         <b id="str">84</b>
       </section>
+      <div class="units" id="units"></div>
 
       <section>
         <p class="label">Ausrichtung</p>
@@ -852,7 +860,7 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
   // DATEN – eingebauter Stand 13.10.2026 (nach dem 7. Spieltag)
   // Mit Hintergrund-Helfer wird das automatisch durch den echten Stand ersetzt.
   // =====================================================================
-  var APP_VERSION = "24 (14.10.2026)";
+  var APP_VERSION = "25 (14.10.2026)";
   var FB_NAME = "Fenerbahçe";
   var FB_RATING = 84;
   var FB_STADIUM = "Chobani Stadyumu";
@@ -1001,11 +1009,312 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
   };
   var POS_WEIGHT = { TW: 0, RV: 0.35, LV: 0.35, IV: 0.3, ZDM: 0.6, ZM: 0.9, RA: 2.1, LA: 2.1, ZOM: 2.2, ST: 3.6 };
   var ASSIST_WEIGHT = { TW: 0.05, RV: 1, LV: 1, IV: 0.3, ZDM: 0.8, ZM: 1.3, RA: 2, LA: 2, ZOM: 2.6, ST: 1.2 };
+  // Taktik: jede Ausrichtung hat Vor- und Nachteile.
+  // own/opp: Faktor auf Chancen aus dem Spiel (eigene / gegnerische), counterOwn: eigene Konter,
+  // risk: wie viele Konter man zulässt, poss: Ballbesitz, drain: Kraftverbrauch, foul: Foulspiel
   var TACTICS = {
-    def: { fb: 0.85, op: 0.82, note: "Weniger Torchancen auf beiden Seiten. Gut, um eine Führung zu halten." },
-    bal: { fb: 1, op: 1, note: "Normales Spiel ohne Risiko." },
-    off: { fb: 1.18, op: 1.14, note: "Mehr eigene Chancen, aber auch mehr Konter gegen Fener." }
+    def: { own: 0.85, opp: 0.88, counterOwn: 1.35, risk: 0.75, poss: -0.05, drain: 0.93, foul: 1.04, note: "Tief stehen und kontern: deutlich weniger Tore auf beiden Seiten. Hilft dem Außenseiter und beim Verteidigen einer Führung, kostet einen Favoriten Punkte." },
+    bal: { own: 1, opp: 1, counterOwn: 1, risk: 1, poss: 0, drain: 1, foul: 1, note: "Normales Spiel ohne besonderes Risiko." },
+    off: { own: 1.13, opp: 1.06, counterOwn: 0.85, risk: 1.6, poss: 0.03, drain: 1.1, foul: 1.03, note: "Hohes Pressing und viele Spieler vorne: mehr Tore auf beiden Seiten, mehr Konter gegen Fener. Lohnt sich als klarer Favorit, riskant gegen starke Konterteams." }
   };
+
+
+  // =====================================================================
+  // Spielerwerte (Einschätzung für 2026/27, Skala 1–99)
+  // pac Tempo, fin Abschluss, pas Passspiel und Kreativität, def Zweikampf und Stellungsspiel,
+  // phy Physis und Kopfball, sta Ausdauer, wr Laufbereitschaft, agg Härte, pen Elfmeter, gk Torwart
+  // Spieler, die hier fehlen (z. B. umbenannt), bekommen Werte aus Position und Stärke.
+  // =====================================================================
+  var PLAYER_DB = {
+    "Ederson": { gk: 86, pas: 86, pac: 62, fin: 20, def: 30, phy: 80, sta: 72, wr: 50, agg: 45, pen: 40 },
+    "Nélson Semedo": { pac: 82, fin: 52, pas: 72, def: 76, phy: 72, sta: 83, wr: 82, agg: 58, pen: 45 },
+    "Milan Škriniar": { pac: 68, fin: 42, pas: 66, def: 86, phy: 85, sta: 76, wr: 74, agg: 74, pen: 40 },
+    "Nathan Aké": { pac: 73, fin: 48, pas: 76, def: 82, phy: 74, sta: 74, wr: 72, agg: 56, pen: 45 },
+    "Archie Brown": { pac: 81, fin: 50, pas: 73, def: 74, phy: 72, sta: 85, wr: 83, agg: 64, pen: 45 },
+    "N'Golo Kanté": { pac: 66, fin: 62, pas: 78, def: 84, phy: 74, sta: 84, wr: 92, agg: 64, pen: 55 },
+    "Mattéo Guendouzi": { pac: 70, fin: 69, pas: 82, def: 76, phy: 76, sta: 90, wr: 90, agg: 78, pen: 60 },
+    "Mason Greenwood": { pac: 86, fin: 86, pas: 80, def: 35, phy: 70, sta: 76, wr: 62, agg: 48, pen: 82 },
+    "Marco Asensio": { pac: 72, fin: 83, pas: 85, def: 40, phy: 62, sta: 68, wr: 60, agg: 45, pen: 86 },
+    "Kerem Aktürkoğlu": { pac: 86, fin: 80, pas: 78, def: 38, phy: 60, sta: 80, wr: 78, agg: 50, pen: 74 },
+    "Vedat Muriqi": { pac: 62, fin: 82, pas: 68, def: 42, phy: 89, sta: 78, wr: 77, agg: 72, pen: 75 },
+    "Mert Günok": { gk: 76, pas: 64, pac: 50, fin: 18, def: 28, phy: 74, sta: 70, wr: 50, agg: 40, pen: 30 },
+    "Levent Mercan": { pac: 82, fin: 55, pas: 70, def: 70, phy: 66, sta: 80, wr: 78, agg: 60, pen: 50 },
+    "Jayden Oosterwolde": { pac: 82, fin: 45, pas: 68, def: 78, phy: 80, sta: 78, wr: 74, agg: 66, pen: 40 },
+    "Kojo Oppong": { pac: 80, fin: 38, pas: 60, def: 72, phy: 76, sta: 76, wr: 72, agg: 62, pen: 35 },
+    "İsmail Yüksek": { pac: 70, fin: 58, pas: 71, def: 77, phy: 77, sta: 88, wr: 91, agg: 80, pen: 50 },
+    "Mert Hakan Yandaş": { pac: 64, fin: 70, pas: 77, def: 62, phy: 64, sta: 76, wr: 80, agg: 76, pen: 70 },
+    "İrfan Can Kahveci": { pac: 72, fin: 79, pas: 82, def: 42, phy: 60, sta: 72, wr: 66, agg: 50, pen: 78 },
+    "Oğuz Aydın": { pac: 86, fin: 74, pas: 70, def: 40, phy: 64, sta: 78, wr: 74, agg: 52, pen: 62 },
+    "Dorgeles Nene": { pac: 86, fin: 75, pas: 72, def: 40, phy: 68, sta: 80, wr: 75, agg: 55, pen: 64 },
+    "Romelu Lukaku": { pac: 68, fin: 84, pas: 70, def: 38, phy: 90, sta: 70, wr: 62, agg: 62, pen: 84 }
+  };
+  var ATTR_KEYS = ["pac", "fin", "pas", "def", "phy", "sta", "wr", "agg", "pen", "gk"];
+  // Typische Abweichung der Einzelwerte von der Gesamtstärke je Position
+  var POS_TEMPLATE = {
+    TW: { pac: -26, fin: -62, pas: -14, def: -52, phy: -4, sta: -10, wr: -30, agg: -36, pen: -44, gk: 0 },
+    IV: { pac: -10, fin: -36, pas: -12, def: 4, phy: 3, sta: -4, wr: -6, agg: -6, pen: -38, gk: -60 },
+    RV: { pac: 3, fin: -26, pas: -6, def: -3, phy: -6, sta: 4, wr: 4, agg: -18, pen: -32, gk: -60 },
+    LV: { pac: 3, fin: -26, pas: -6, def: -3, phy: -6, sta: 4, wr: 4, agg: -18, pen: -32, gk: -60 },
+    ZDM: { pac: -12, fin: -18, pas: -2, def: 2, phy: -4, sta: 4, wr: 8, agg: -6, pen: -24, gk: -60 },
+    ZM: { pac: -8, fin: -8, pas: 2, def: -6, phy: -8, sta: 6, wr: 6, agg: -8, pen: -12, gk: -60 },
+    ZOM: { pac: -6, fin: 1, pas: 4, def: -38, phy: -16, sta: -8, wr: -14, agg: -32, pen: 2, gk: -60 },
+    RA: { pac: 5, fin: -2, pas: -3, def: -42, phy: -14, sta: -4, wr: -6, agg: -30, pen: -8, gk: -60 },
+    LA: { pac: 5, fin: -2, pas: -3, def: -42, phy: -14, sta: -4, wr: -6, agg: -30, pen: -8, gk: -60 },
+    ST: { pac: -6, fin: 2, pas: -10, def: -38, phy: 4, sta: -4, wr: -6, agg: -12, pen: -4, gk: -60 }
+  };
+  function clampAttr(v) { return Math.max(15, Math.min(99, Math.round(v))); }
+  function attrsFromTemplate(pos, r) {
+    var t = POS_TEMPLATE[pos] || POS_TEMPLATE.ZM, a = {};
+    ATTR_KEYS.forEach(function (k) { a[k] = clampAttr(r + t[k]); });
+    return a;
+  }
+  // Werte eines Spielers inkl. Form (shift = aktuelle Form in Stärkepunkten)
+  function playerAttrs(p) {
+    var db = PLAYER_DB[p.n], base = db ? null : attrsFromTemplate(p.nat || p.pos, p.base || p.r || 74), a = {};
+    var shift = p.f || 0;
+    ATTR_KEYS.forEach(function (k) { var v = db ? (db[k] !== undefined ? db[k] : 30) : base[k]; a[k] = clampAttr(v + (k === "sta" || k === "wr" || k === "agg" ? 0 : shift)); });
+    return a;
+  }
+
+  // Wie gut passt ein Spieler (natürliche Position) auf einen Platz in der Aufstellung? 1 = gelernt
+  var FIT_GROUPS = { TW: "G", IV: "D", RV: "D", LV: "D", ZDM: "M", ZM: "M", ZOM: "M", RA: "A", LA: "A", ST: "A" };
+  var FIT_PAIRS = {
+    "RV|LV": 0.92, "IV|RV": 0.86, "IV|LV": 0.86, "IV|ZDM": 0.86, "ZDM|ZM": 0.95, "ZM|ZOM": 0.93, "ZDM|ZOM": 0.84,
+    "RA|LA": 0.94, "ZOM|RA": 0.9, "ZOM|LA": 0.9, "ZOM|ST": 0.86, "RA|ST": 0.86, "LA|ST": 0.86,
+    "RV|RA": 0.84, "LV|LA": 0.84, "RV|ZDM": 0.82, "LV|ZDM": 0.82, "ZM|RA": 0.84, "ZM|LA": 0.84
+  };
+  function posFit(nat, slot) {
+    if (!nat || nat === slot) return 1;
+    if (nat === "TW" || slot === "TW") return 0.25;
+    var k = FIT_PAIRS[nat + "|" + slot] || FIT_PAIRS[slot + "|" + nat];
+    if (k) return k;
+    return FIT_GROUPS[nat] === FIT_GROUPS[slot] ? 0.82 : 0.68;
+  }
+
+  // Formation aus den Positionen erkennen, z. B. "4-2-3-1"
+  function formationOf(list) {
+    var c = { D: 0, DM: 0, M: 0, AM: 0, F: 0 };
+    list.forEach(function (p) {
+      var s = p.pos;
+      if (s === "IV" || s === "RV" || s === "LV") c.D++;
+      else if (s === "ZDM") c.DM++;
+      else if (s === "ZM") c.M++;
+      else if (s === "ZOM" || s === "RA" || s === "LA") c.AM++;
+      else if (s === "ST") c.F++;
+    });
+    var parts = [c.D];
+    if (c.DM && (c.M || c.AM)) parts.push(c.DM + c.M);
+    else if (c.DM) parts.push(c.DM);
+    else if (c.M) parts.push(c.M);
+    if (c.AM) parts.push(c.AM);
+    if (c.F) parts.push(c.F);
+    return parts.filter(function (x) { return x > 0; }).join("-");
+  }
+
+  // ---------- Mannschaftsteile ----------
+  // Angriff (ATT), Spielkontrolle (CTL), Abwehr (DEF), Torwart (GK). Jeder Wert ist ein gewichteter
+  // Schnitt der Spieler auf dem Platz, mit Positionsfit und aktueller Kraft. Gewicht = wie stark
+  // die Position an diesem Mannschaftsteil beteiligt ist.
+  var UNIT_W = {
+    att: { ST: 1, RA: 0.85, LA: 0.85, ZOM: 0.85, ZM: 0.4, ZDM: 0.2, RV: 0.3, LV: 0.3, IV: 0.1, TW: 0 },
+    ctl: { ZM: 1, ZOM: 0.9, ZDM: 0.9, RV: 0.5, LV: 0.5, RA: 0.5, LA: 0.5, IV: 0.4, ST: 0.3, TW: 0.15 },
+    def: { IV: 1, RV: 0.85, LV: 0.85, ZDM: 0.85, ZM: 0.45, ZOM: 0.15, RA: 0.2, LA: 0.2, ST: 0.1, TW: 0 }
+  };
+  function attScore(a, pos) {
+    if (pos === "ST") return 0.45 * a.fin + 0.2 * a.pac + 0.2 * a.phy + 0.15 * a.pas;
+    if (pos === "RA" || pos === "LA") return 0.3 * a.fin + 0.35 * a.pac + 0.25 * a.pas + 0.1 * a.phy;
+    if (pos === "ZOM") return 0.4 * a.pas + 0.35 * a.fin + 0.15 * a.pac + 0.1 * a.phy;
+    if (pos === "IV") return 0.5 * a.phy + 0.3 * a.pas + 0.2 * a.fin;
+    return 0.4 * a.pas + 0.25 * a.fin + 0.2 * a.pac + 0.15 * a.phy;
+  }
+  function ctlScore(a) { return 0.55 * a.pas + 0.2 * a.wr + 0.1 * a.def + 0.15 * a.pac; }
+  function defScore(a, pos) {
+    if (pos === "IV") return 0.55 * a.def + 0.2 * a.phy + 0.15 * a.pac + 0.1 * a.wr;
+    return 0.5 * a.def + 0.2 * a.pac + 0.15 * a.phy + 0.15 * a.wr;
+  }
+  // Kraft (0–100) -> Leistungsfaktor. Bei 60 % Kraft etwa −5 %.
+  function staminaF(st) { return 0.875 + 0.125 * Math.max(0, Math.min(100, st)) / 100; }
+  var SHOOT_W = { ST: 3.2, RA: 2, LA: 2, ZOM: 2, ZM: 0.9, ZDM: 0.5, RV: 0.35, LV: 0.35, IV: 0.25, TW: 0 };
+  function unitsRaw(list) {
+    var s = { att: 0, ctl: 0, def: 0 }, w = { att: 0, ctl: 0, def: 0 }, gk = null, fin = 0, finW = 0;
+    list.forEach(function (p) {
+      var a = p.a || playerAttrs(p), fit = p.fit !== undefined ? p.fit : posFit(p.nat || p.pos, p.pos), sf = staminaF(p.stam === undefined ? 100 : p.stam);
+      var q = fit * sf;
+      if (p.pos === "TW") { gk = (a.gk || 40) * (0.6 + 0.4 * fit) * sf; }
+      ["att", "ctl", "def"].forEach(function (u) {
+        var wt = UNIT_W[u][p.pos] || 0; if (!wt) return;
+        var sc = u === "att" ? attScore(a, p.pos) : u === "ctl" ? ctlScore(a) : defScore(a, p.pos);
+        s[u] += wt * sc * q; w[u] += wt;
+      });
+      var fw = SHOOT_W[p.pos] !== undefined ? SHOOT_W[p.pos] : 0.3; fin += fw * a.fin; finW += fw;
+    });
+    return {
+      att: w.att ? s.att / w.att : 40, ctl: w.ctl ? s.ctl / w.ctl : 40, def: w.def ? s.def / w.def : 40,
+      gk: gk === null ? 30 : gk, fin: finW ? fin / finW : 60,
+      shape: { att: w.att, ctl: w.ctl, def: w.def }
+    };
+  }
+  // Bezugsteam: ein durchschnittliches 84er-Team im 4-2-3-1. Seine Mannschaftsteile ergeben genau 84.
+  var REF_XI = ["TW", "RV", "IV", "IV", "LV", "ZDM", "ZDM", "RA", "ZOM", "LA", "ST"].map(function (pos) { return { pos: pos, nat: pos, r: 84, a: attrsFromTemplate(pos, 84) }; });
+  var REF_U = unitsRaw(REF_XI);
+  // Umrechnung in Stärkepunkte (gleiche Skala wie die Vereinsstärken 67–91).
+  // Die Formation wirkt über die Zusammensetzung (wer steht in welchem Mannschaftsteil). Das
+  // zusätzliche Risiko offensiver Umstellungen bilden Taktik und Spielstand-Effekte ab, nicht die Einheiten.
+  function unitsToRating(u) {
+    function shapeF(k) { return Math.pow(Math.max(0.3, u.shape[k] / REF_U.shape[k]), 0.05); }
+    return {
+      att: 84 + (u.att * shapeF("att") - REF_U.att),
+      ctl: 84 + (u.ctl * shapeF("ctl") - REF_U.ctl),
+      def: 84 + (u.def * shapeF("def") - REF_U.def),
+      gk: u.gk, fin: u.fin
+    };
+  }
+
+  // ---------- Gegnerprofile ----------
+  // block: wie tief der Gegner steht (0–1), press: Pressing, counter: Konterstärke, poss: Ballbesitz-
+  // Neigung, setp: Standards, agg: Härte. f: typische Formation.
+  var STYLE_SMALL = { f: "4-1-4-1", block: 0.65, press: 0.35, counter: 0.55, poss: -0.04, setp: 0.55, agg: 0.64 };
+  var STYLE_EU = { f: "4-2-3-1", block: 0.4, press: 0.6, counter: 0.6, poss: 0.02, setp: 0.55, agg: 0.56 };
+  var OPP_STYLE = {
+    "Galatasaray": { f: "4-2-3-1", block: 0.3, press: 0.75, counter: 0.6, poss: 0.04, setp: 0.6, agg: 0.68 },
+    "Beşiktaş": { f: "4-2-3-1", block: 0.4, press: 0.6, counter: 0.6, poss: 0.02, setp: 0.55, agg: 0.64 },
+    "Trabzonspor": { f: "4-2-3-1", block: 0.45, press: 0.6, counter: 0.65, poss: 0, setp: 0.6, agg: 0.7 },
+    "Başakşehir": { f: "4-2-3-1", block: 0.5, press: 0.45, counter: 0.5, poss: 0.01, setp: 0.5, agg: 0.56 },
+    "Amedspor": { f: "4-4-2", block: 0.55, press: 0.55, counter: 0.7, poss: -0.02, setp: 0.6, agg: 0.7 },
+    "Samsunspor": { f: "4-2-3-1", block: 0.55, press: 0.5, counter: 0.6, poss: -0.01, setp: 0.6, agg: 0.64 },
+    "Göztepe": { f: "3-4-2-1", block: 0.6, press: 0.55, counter: 0.6, poss: -0.03, setp: 0.6, agg: 0.68 },
+    "Alanyaspor": { f: "4-2-3-1", block: 0.6, press: 0.4, counter: 0.6, poss: -0.03, setp: 0.55, agg: 0.62 },
+    "Real Madrid": { f: "4-3-3", block: 0.4, press: 0.5, counter: 0.9, poss: 0.04, setp: 0.6, agg: 0.5 },
+    "Bayern": { f: "4-2-3-1", block: 0.15, press: 0.8, counter: 0.6, poss: 0.08, setp: 0.65, agg: 0.52 },
+    "Liverpool": { f: "4-3-3", block: 0.2, press: 0.85, counter: 0.8, poss: 0.05, setp: 0.65, agg: 0.55 },
+    "Barcelona": { f: "4-3-3", block: 0.15, press: 0.75, counter: 0.5, poss: 0.1, setp: 0.5, agg: 0.5 },
+    "Arsenal": { f: "4-3-3", block: 0.25, press: 0.8, counter: 0.6, poss: 0.06, setp: 0.9, agg: 0.56 },
+    "Man City": { f: "4-2-3-1", block: 0.15, press: 0.8, counter: 0.55, poss: 0.12, setp: 0.6, agg: 0.5 },
+    "Atlético Madrid": { f: "4-4-2", block: 0.75, press: 0.6, counter: 0.75, poss: -0.02, setp: 0.7, agg: 0.7 },
+    "Aston Villa": { f: "4-2-3-1", block: 0.45, press: 0.6, counter: 0.75, poss: 0.02, setp: 0.6, agg: 0.58 },
+    "AS Rom": { f: "3-4-2-1", block: 0.55, press: 0.55, counter: 0.6, poss: 0, setp: 0.65, agg: 0.68 },
+    "Villarreal": { f: "4-4-2", block: 0.45, press: 0.5, counter: 0.65, poss: 0.03, setp: 0.55, agg: 0.56 },
+    "Schachtar Donezk": { f: "4-1-4-1", block: 0.4, press: 0.55, counter: 0.55, poss: 0.04, setp: 0.5, agg: 0.56 },
+    "Slavia Prag": { f: "3-4-1-2", block: 0.45, press: 0.7, counter: 0.55, poss: 0, setp: 0.75, agg: 0.74 },
+    "LASK": { f: "3-4-3", block: 0.5, press: 0.7, counter: 0.6, poss: -0.03, setp: 0.6, agg: 0.68 }
+  };
+  function styleOf(name) {
+    if (OPP_STYLE[name]) return OPP_STYLE[name];
+    var lg = LEAGUE.filter(function (t) { return t.n === name; })[0];
+    return lg ? STYLE_SMALL : STYLE_EU;
+  }
+  var FORMATION_SLOTS = {
+    "4-2-3-1": ["TW", "RV", "IV", "IV", "LV", "ZDM", "ZDM", "RA", "ZOM", "LA", "ST"],
+    "4-1-4-1": ["TW", "RV", "IV", "IV", "LV", "ZDM", "RA", "ZM", "ZM", "LA", "ST"],
+    "4-4-2": ["TW", "RV", "IV", "IV", "LV", "RA", "ZM", "ZM", "LA", "ST", "ST"],
+    "4-3-3": ["TW", "RV", "IV", "IV", "LV", "ZDM", "ZM", "ZM", "RA", "LA", "ST"],
+    "3-4-2-1": ["TW", "IV", "IV", "IV", "RV", "ZM", "ZM", "LV", "ZOM", "ZOM", "ST"],
+    "3-4-1-2": ["TW", "IV", "IV", "IV", "RV", "ZM", "ZM", "LV", "ZOM", "ST", "ST"],
+    "3-4-3": ["TW", "IV", "IV", "IV", "RV", "ZM", "ZM", "LV", "RA", "LA", "ST"]
+  };
+  var BENCH_SLOTS = ["TW", "IV", "RV", "ZDM", "ZM", "ZOM", "RA", "LA", "ST"];
+  var OPP_NUMBERS = { TW: [1], IV: [4, 5, 3], RV: [2], LV: [3, 13], ZDM: [6, 8], ZM: [8, 14, 16], ZOM: [10], RA: [7], LA: [11], ST: [9, 19] };
+  function hashStr(s) { var h = 2166136261; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+  // Virtueller Kader für einen Gegner: Spieler mit Werten um die Vereinsstärke, für jeden Verein immer gleich
+  function oppSquad(name, r, style) {
+    var rng = makeRng(hashStr(name)), slots = FORMATION_SLOTS[style.f] || FORMATION_SLOTS["4-2-3-1"], used = {}, out = [];
+    function num(pos) {
+      var c = OPP_NUMBERS[pos] || [20];
+      for (var i = 0; i < c.length; i++) if (!used[c[i]]) { used[c[i]] = 1; return c[i]; }
+      var n = 12 + Math.floor(rng() * 30); while (used[n]) n++; used[n] = 1; return n;
+    }
+    function mk(pos, bench) {
+      var pr = r + (bench ? -4 : 0) + Math.round((rng() - 0.5) * 6), a = attrsFromTemplate(pos, pr);
+      ATTR_KEYS.forEach(function (k) { a[k] = clampAttr(a[k] + (rng() - 0.5) * 6); });
+      a.agg = clampAttr(a.agg + (style.agg - 0.6) * 30);
+      return { no: num(pos), pos: pos, nat: pos, n: null, r: pr, a: a };
+    }
+    slots.forEach(function (pos) { out.push(mk(pos, false)); });
+    return { xi: out, bench: BENCH_SLOTS.map(function (pos) { return mk(pos, true); }) };
+  }
+
+  // =====================================================================
+  // Erwartungstore: EIN Modell für Engine, Prognose, Saison-Hochrechnung und Hintergrundspiele
+  // log λ = log μ + Heimvorteil + g(Δ) + Torwart + Derby + Taktik
+  // Δ = 0,6·(Angriff − gegn. Abwehr) + 0,4·(Kontrolle − gegn. Kontrolle), g sättigt (tanh), damit
+  // große Stärkeunterschiede keine unrealistischen Kantersiege erzeugen.
+  // Werte aus Süper Lig 2022–26 (football-data.co.uk): 2,85 Tore je Spiel, log(Heim/Auswärts) = 0,23,
+  // Dixon-Coles ρ = −0,11.
+  // =====================================================================
+  var XG = {
+    MU: 1.415, HOME: 0.117, SLOPE: 30, SAT: 1.2, GK: 0.0075, GKREF: 73, DERBY: -0.15, RHO: -0.11,
+    EURO_TR: -5,          // Süper-Lig-Klubs im Europapokal (Ligaunterschied laut UEFA-Koeffizient)
+    RED_OWN: 0.62, RED_OPP: 1.38, CAL: 1
+  };
+  var STADIUM_HOME = { "Galatasaray": 0.13, "Trabzonspor": 0.13, "Beşiktaş": 0.125 };
+  function gStrength(d) { return XG.SAT * Math.tanh(d / (XG.SLOPE * XG.SAT)); }
+  // u: Mannschaftsteile in Stärkepunkten {att, ctl, def, gk}
+  function sideDelta(uX, uY) { return 0.6 * (uX.att - uY.def) + 0.4 * (uX.ctl - uY.ctl); }
+  // Anteile der Tore nach Entstehung (Süper Lig/Top-5: ~10 % Elfmeter, ~10 % Standards, ~8 % Konter)
+  var SHARE = { open: 0.72, counter: 0.08, corner: 0.06, fk: 0.04, pen: 0.10 };
+  function counterF(style) { return 0.6 + 0.8 * (style ? style.counter : 0.5); }
+  function blockEffect(styleDef) { // tiefer Block: der Gegner verteidigt besser, greift aber weniger an
+    var b = styleDef ? styleDef.block : 0.5;
+    return { att: -1.5 * (b - 0.5), def: 3 * (b - 0.5) };
+  }
+  // Faktor auf die Tore von X durch beide Taktiken und den Konterstil von X
+  function tacticMult(tX, tY, styleX) {
+    return (1 - SHARE.counter) * tX.own * tY.opp + SHARE.counter * counterF(styleX) * tX.counterOwn * tY.risk;
+  }
+  // Erwartete Tore beider Seiten.
+  // ctx: {uFb, uOp (Mannschaftsteile), venue, oppName, derby, tFb, tOp (Taktik), sFb, sOp (Stil)}
+  // base*: ohne Torwart, Taktik und Konterstil (die Engine bildet diese Effekte selbst nach)
+  function expectedGoals(ctx) {
+    var hF = ctx.venue === "home" ? XG.HOME : ctx.venue === "away" ? -(STADIUM_HOME[ctx.oppName] || XG.HOME) : 0;
+    var uF = ctx.uFb, uO = ctx.uOp;
+    var bO = blockEffect(ctx.sOp), bF = blockEffect(ctx.sFb);
+    var uOd = { att: uO.att + bO.att, ctl: uO.ctl, def: uO.def + bO.def }, uFd = { att: uF.att + bF.att, ctl: uF.ctl, def: uF.def + bF.def };
+    var dF = sideDelta(uFd, uOd), dO = sideDelta(uOd, uFd);
+    var der = ctx.derby ? XG.DERBY : 0;
+    var tF = ctx.tFb || TACTICS.bal, tO = ctx.tOp || TACTICS.bal;
+    var baseF = XG.MU * Math.exp(hF + gStrength(dF) + der) * XG.CAL;
+    var baseO = XG.MU * Math.exp(-hF + gStrength(dO) + der) * XG.CAL;
+    var lf = baseF * Math.exp(-XG.GK * ((uO.gk || XG.GKREF) - XG.GKREF)) * tacticMult(tF, tO, ctx.sFb);
+    var lo = baseO * Math.exp(-XG.GK * ((uF.gk || XG.GKREF) - XG.GKREF)) * tacticMult(tO, tF, ctx.sOp);
+    return { lf: lf, lo: lo, baseF: baseF, baseO: baseO, dF: dF, dO: dO };
+  }
+  // Einheiten eines Gegners aus Vereinsstärke r (+ Profil). gk aus dem virtuellen Keeper.
+  function oppUnits(r, style) {
+    return { att: r, ctl: r + (style ? style.poss * 30 : 0), def: r, gk: r };
+  }
+  // Spielverlauf in der Formel: ein klarer Favorit nimmt nach Führungen Tempo raus, der Außenseiter
+  // kommt über Konter häufiger zum Zug (an der Engine kalibriert, Abweichung < 2 %).
+  function stateAdjust(lf, lo) {
+    var d = Math.abs(lf - lo) - 0.3; if (d <= 0) return [lf, lo];
+    var fav = 1 - 0.03 * d, dog = 1 + 0.03 * d;
+    return lf > lo ? [lf * fav, lo * dog] : [lf * dog, lo * fav];
+  }
+  // Dixon-Coles-Wahrscheinlichkeiten für alle Ergebnisse bis 10:10
+  function dcMatrix(lf, lo, rho) {
+    rho = rho === undefined ? XG.RHO : rho;
+    var N = 11, m = [], pf = [], po = [], i, j, tot = 0;
+    pf[0] = Math.exp(-lf); po[0] = Math.exp(-lo);
+    for (i = 1; i < N; i++) { pf[i] = pf[i - 1] * lf / i; po[i] = po[i - 1] * lo / i; }
+    for (i = 0; i < N; i++) {
+      m[i] = [];
+      for (j = 0; j < N; j++) {
+        var tau = 1;
+        if (i === 0 && j === 0) tau = 1 - lf * lo * rho;
+        else if (i === 0 && j === 1) tau = 1 + lf * rho;
+        else if (i === 1 && j === 0) tau = 1 + lo * rho;
+        else if (i === 1 && j === 1) tau = 1 - rho;
+        m[i][j] = Math.max(0, pf[i] * po[j] * tau); tot += m[i][j];
+      }
+    }
+    for (i = 0; i < N; i++) for (j = 0; j < N; j++) m[i][j] /= tot;
+    return m;
+  }
+  function sampleMatrix(m, rf) {
+    var x = (rf || rnd)(), i, j;
+    for (i = 0; i < m.length; i++) for (j = 0; j < m[i].length; j++) { x -= m[i][j]; if (x <= 0) return [i, j]; }
+    return [0, 0];
+  }
+
 
   // =====================================================================
   // Speicher (optional, nur auf diesem Gerät)
@@ -1114,19 +1423,37 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
   }
   function addDays(iso, n) { var d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
   function poisson(l) { var L = Math.exp(-l), k = 0, p = 1; do { k++; p *= rnd(); } while (p > L); return k - 1; }
-  function quickScore(rH, rA, adv) {
-    var d = (rH - rA + adv) / 22.5;
-    return [poisson(1.35 * Math.exp(d)), poisson(1.35 * Math.exp(-d))];
+  // Hintergrundspiele (andere Ligaspiele, CL-Ligaphase): dasselbe Erwartungsmodell wie die Engine,
+  // nur aus den Vereinsstärken, mit Dixon-Coles-Korrektur. hLog = Heimvorteil (log), 0 = neutral.
+  function quickLambdas(rH, rA, hLog) {
+    var g = gStrength(rH - rA);
+    return [XG.MU * Math.exp(hLog + g - XG.GK * (rA - XG.GKREF)) * XG.CAL, XG.MU * Math.exp(-hLog - g - XG.GK * (rH - XG.GKREF)) * XG.CAL];
   }
+  function quickScore(rH, rA, hLog) { var l = stateAdjust.apply(null, quickLambdas(rH, rA, hLog)); return sampleMatrix(dcMatrix(l[0], l[1])); }
   function pct(x) { return Math.round(x * 100) + " %"; }
 
-  // Teamstärke aus der Startelf
-  var DEF_AVG = DEFAULT_SQUAD.xi.reduce(function (s, p) { return s + p.r; }, 0) / 11;
+  // Teamstärke aus der Startelf: dieselben Mannschaftsteile wie in der Engine, gewichtet so, wie sie
+  // im Erwartungsmodell wirken (Kontrolle zählt für Angriff und Abwehr, daher 0,4).
+  // Fener-Anker: die Standard-Startelf entspricht der kalibrierten Vereinsstärke FB_RATING (84).
+  // Änderungen an Aufstellung, Form und Kraft wirken relativ dazu über die Spielerwerte.
+  var FB_ANCHOR = null;
+  function fbAnchor() {
+    if (FB_ANCHOR === null) {
+      var u = unitsToRating(unitsRaw(DEFAULT_SQUAD.xi.map(function (p) { return { pos: p.pos, nat: p.pos, n: p.n, r: p.r }; })));
+      FB_ANCHOR = FB_RATING - (0.3 * u.att + 0.4 * u.ctl + 0.3 * u.def);
+    }
+    return FB_ANCHOR;
+  }
+  function teamUnits(xiArg, fresh) {
+    var xi = (xiArg || squad.xi).map(function (p) { return { pos: p.pos, nat: p.nat || p.pos, n: p.n, r: p.r, base: p.base, f: p.f, stam: fresh && fresh[p.n] !== undefined ? fresh[p.n] : 100 }; });
+    var u = unitsToRating(unitsRaw(xi)), k = fbAnchor();
+    return { att: u.att + k, ctl: u.ctl + k, def: u.def + k, gk: u.gk, fin: u.fin };
+  }
+  function overallOf(u) { var o = 0.3 * u.att + 0.4 * u.ctl + 0.3 * u.def; return o + 0.11 * (u.gk - o); }
   function teamStrength(xiArg) {
     var xi = xiArg || squad.xi;
-    var avg = xi.reduce(function (s, p) { return s + (p.r || 76); }, 0) / xi.length;
-    var s = FB_RATING + (avg - DEF_AVG) * 1.2;
-    if (!xi.some(function (p) { return p.pos === "TW"; })) s -= 8;
+    var s = overallOf(teamUnits(xi));
+    if (xi.length < 11) s -= 20 * (11 - xi.length);  // Unterzahl entspricht etwa 20 Stärkepunkten
     return Math.round(s * 10) / 10;
   }
   function tactic() { return TACTICS[prefs.tactic] || TACTICS.bal; }
@@ -1408,6 +1735,13 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
   // Kader + Taktik
   // =====================================================================
   var swapSel = null;
+  // Wichtigste Spielerwerte je Rolle, z. B. "TEM 86 · ABS 86 · PAS 80"
+  var ATTR_DE = { pac: "TEM", fin: "ABS", pas: "PAS", def: "DEF", phy: "PHY", sta: "AUS", wr: "LAU", agg: "HÄR", pen: "ELF", gk: "TOR" };
+  function attrLine(p) {
+    var a = playerAttrs(withForm(p)), keys = p.pos === "TW" ? ["gk", "pas", "phy"] : /IV|RV|LV|ZDM/.test(p.pos) ? ["def", "pac", "phy", "pas", "sta"] : ["pac", "fin", "pas", "phy", "sta"];
+    var fr = S ? freshFor(p.n, (nextFixture() || { d: "2026-10-14" }).d) : 100;
+    return '<span class="pl-at">' + keys.map(function (k) { return ATTR_DE[k] + " <b>" + a[k] + "</b>"; }).join(" · ") + (fr < 99 ? " · Kraft <b>" + Math.round(fr) + " %</b>" : "") + (PLAYER_DB[p.n] ? "" : " · geschätzt") + "</span>";
+  }
   function renderSquad() {
     function rows(list, key) {
       return list.map(function (p, i) {
@@ -1416,14 +1750,18 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
         var y = S && S.avail && S.avail[p.n] ? S.avail[p.n].y : null;
         var yTxt = y && (y.SL || y.CL) ? "Gelb: " + (y.SL ? y.SL + " Liga" : "") + (y.SL && y.CL ? ", " : "") + (y.CL ? y.CL + " CL" : "") : "";
         var status = why || yTxt ? '<span class="pl-st' + (why ? " out" : "") + '">' + esc(why ? (why.indexOf("verletzt") === 0 ? "🚑 " : "🟥 ") + why : "🟨 " + yTxt) + "</span>" : "";
+        status += attrLine(p);
         return '<div class="pl' + (sel ? " sel" : "") + (why ? " is-out" : "") + '"><span class="no">' + p.no + '</span><span class="pos">' + p.pos + '</span><input id="pl-' + key + "-" + i + '" data-k="' + key + '" data-i="' + i + '" value="' + esc(p.n) + '" aria-label="' + p.pos + " Nummer " + p.no + '" autocomplete="off" autocorrect="off" spellcheck="false"><span class="rt' + (pform(p.n) >= 1 ? " up" : pform(p.n) <= -1 ? " down" : "") + '" title="Form ' + pform(p.n) + '">' + (p.r || "") + (pform(p.n) ? formArrow(pform(p.n)) : "") + '</span><button type="button" class="sw" data-swk="' + key + '" data-swi="' + i + '" aria-label="' + esc(p.n) + ' tauschen">⇄</button>' + status + "</div>";
       }).join("");
     }
     $("xi").innerHTML = rows(squad.xi, "xi");
     $("bench").innerHTML = rows(squad.bench, "bench");
     var s = teamStrength();
-    $("str").textContent = (s + (FORM[FB_NAME] || 0)).toFixed(1);
-    $("str-note").textContent = (squad.xi.some(function (p) { return p.pos === "TW"; }) ? "aus der Startelf" : "Achtung: kein Torwart in der Startelf (−8)") + " · Form " + formText(FB_NAME) + " (aus der echten Tordifferenz)";
+    $("str").textContent = (s + (FORM[FB_NAME] || 0) + moraleAdj()).toFixed(1);
+    $("str-note").textContent = (squad.xi.some(function (p) { return p.pos === "TW"; }) ? "aus den Spielerwerten der Startelf" : "Achtung: kein Torwart in der Startelf") + " · Form " + formText(FB_NAME) + " (echte Tordifferenz) · Moral " + moraleText();
+    var u = teamUnits(squad.xi), adj = (FORM[FB_NAME] || 0) + moraleAdj();
+    $("units").innerHTML = '<div><b>' + (u.att + adj).toFixed(1) + '</b><small>Angriff</small></div><div><b>' + (u.ctl + adj).toFixed(1) + '</b><small>Kontrolle</small></div><div><b>' + (u.def + adj).toFixed(1) + '</b><small>Abwehr</small></div><div><b>' + Math.round(u.gk) + '</b><small>Torwart</small></div>' +
+      '<div class="wide">Formation ' + esc(formationOf(squad.xi)) + ' · Angriff = Abschluss, Tempo, Passspiel der Offensive; Kontrolle = Passspiel und Laufarbeit; Abwehr = Zweikampf, Tempo, Physis der Defensive. Spieler auf fremder Position verlieren je nach Abstand 5–30 %.</div>';
     setSeg("tactic", "t", prefs.tactic);
     $("tactic-note").textContent = tactic().note;
   }
@@ -1448,7 +1786,7 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
     }
   });
   $("reset-squad").addEventListener("click", function () {
-    squad = clone(DEFAULT_SQUAD); save("fb.squad.v3", squad); swapSel = null; predCache = {}; renderSquad();
+    squad = clone(DEFAULT_SQUAD); save("fb.squad.v3", squad); swapSel = null; predCache = {}; UNIT_MEMO = {}; renderSquad();
   });
 
   // =====================================================================
@@ -1482,44 +1820,744 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
   function pushHistory(h) { history.unshift(h); history = history.slice(0, 100); save("fb.history", history); }
 
   // =====================================================================
-  // Match-Engine
-  // cfg: { opp:{n,r,st,rival}, venue, fbRating, comp, ko, agg, live, dry, season:{fx}, round }
+  // Match-Engine v2
+  // Ereignisbasiert, Minute für Minute: Ballbesitzphasen, Chancen aus dem Spiel, Konter, Ecken,
+  // Freistöße, Elfmeter, Fouls und Karten, Verletzungen, Kraft, Wechsel und Taktik beider Trainer.
+  // Die Engine fasst keine Anzeige an. Alles, was passiert, landet als Ereignis in M.log; die
+  // Live-Anzeige hört über liveEvent() zu. Zufall kommt aus einem eigenen Generator mit Startwert
+  // (M.seed), damit sich jedes Spiel exakt wiederholen lässt.
+  // cfg: { opp:{n,r,st,rival}, venue, xi, bench, comp, ko, agg, euro, fbAdj, fresh, tactic,
+  //        live, dry, season:{fx}, round, seed }
   // =====================================================================
   var M = null, timer = null;
 
-  // Heimvorteil in Stärkepunkten: Kadıköy und die großen Derby-Stadien sind lauter als der Durchschnitt
-  var HOME_ADV = { "Galatasaray": 4, "Beşiktaş": 3.5, "Trabzonspor": 4 };
-  var FB_HOME_ADV = 3.5;
-  function homeAdvFor(venue, oppName) {
-    if (venue === "home") return FB_HOME_ADV;
-    if (venue === "away") return HOME_ADV[oppName] || 3;
-    return 0;
-  }
-  function newMatch(cfg) {
-    var homeAdv = homeAdvFor(cfg.venue, cfg.opp.n);
-    var round = cfg.round ? cfg.round.map(function (r) { return { h: r.h, a: r.a, goals: r.goals, ch: 0, ca: 0, hit: 0 }; }) : null;
-    return {
-      cfg: cfg, live: !!cfg.live, season: cfg.season || null, opp: cfg.opp,
-      fbHome: cfg.venue !== "away", neutral: cfg.venue === "neutral",
-      ko: cfg.ko, agg: cfg.agg || null, comp: cfg.comp, derby: !!cfg.opp.rival,
-      tac: tactic(), tacKey: prefs.tactic || "bal",
-      fb: { r: cfg.fbRating + (cfg.venue === "home" ? homeAdv : 0), g: 0, shots: 0, sot: 0, xg: 0, corners: 0, fouls: 0, y: 0, red: 0, poss: 0, scorers: [], log: [] },
-      op: { r: cfg.opp.r + (cfg.venue === "away" ? homeAdv : 0), g: 0, shots: 0, sot: 0, xg: 0, corners: 0, fouls: 0, y: 0, red: 0, poss: 0, scorers: [] },
-      onPitch: (cfg.xi || squad.xi).map(function (p) { return { no: p.no, pos: p.pos, n: p.n, r: p.r || 76, rating: 6.3 + rnd() * 0.4, booked: false, off: false }; }),
-      bench: (cfg.bench || squad.bench).map(function (p) { return { no: p.no, pos: p.pos, n: p.n, r: p.r || 76, rating: 6.4, booked: false, off: false }; }),
-      cardLog: [], injLog: [], autoSub: true, // der Trainer wechselt automatisch
-      mult: 1,
-      subs: 0, minute: 0, half: 1,
-      added1: 1 + Math.floor(rnd() * 5), added2: 3 + Math.floor(rnd() * 6), goalMins: [], penCount: 0, ogCount: 0,
-      momentum: 0, done: false, pens: null, conf: round,
-      speed: prefs.speed
+  function makeRng(seed) {
+    var a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) | 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
   }
+  function newSeed() {
+    try { var u = new Uint32Array(1); crypto.getRandomValues(u); return u[0]; } catch (e) { return Math.floor(Math.random() * 4294967296) >>> 0; }
+  }
+  function R() { return M.rng(); }
+  function rpick(arr) { return arr[Math.floor(R() * arr.length)]; }
+  function rweighted(list, wf) {
+    var total = 0, i, ws = [];
+    for (i = 0; i < list.length; i++) { ws[i] = Math.max(0, wf(list[i])); total += ws[i]; }
+    if (!(total > 0)) return list[Math.floor(R() * list.length)];
+    var x = R() * total;
+    for (i = 0; i < list.length; i++) { x -= ws[i]; if (x <= 0) return list[i]; }
+    return list[list.length - 1];
+  }
+  function rnorm() { var u = 1 - R(), v = R(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+  function sig(x) { return 1 / (1 + Math.exp(-x)); }
+  function logit(p) { return Math.log(p / (1 - p)); }
+  function clamp(x, a, b) { return x < a ? a : x > b ? b : x; }
 
-  function eff(side) { return M[side].r - M[side].red * 6; }
+  // Torgefahr im Spielverlauf (StatsBomb Top-5, relativ zu 0–15'), Summe über ein Spiel ≈ 116,6
+  function timeW(h, m) {
+    if (h === 1) return m <= 15 ? 1 : m <= 30 ? 1.09 : m <= 45 ? 1.13 : 1.45;
+    if (h === 2) return m <= 60 ? 1.14 : m <= 75 ? 1.11 : m <= 90 ? 1.19 : 1.3;
+    return 1.1;
+  }
+  var TIME_SUM = 15 * (1 + 1.09 + 1.13 + 1.14 + 1.11 + 1.19) + 3 * 1.45 + 5.8 * 1.3;
+  // Karten im Spielverlauf (StatsBomb: wenige früh, viele spät)
+  function cardW(h, m) {
+    if (h === 1) return m <= 15 ? 0.38 : m <= 30 ? 0.83 : m <= 45 ? 1.14 : 0.6;
+    if (h === 2) return m <= 60 ? 1.06 : m <= 75 ? 1.33 : m <= 90 ? 1.37 : 1.23;
+    return 1.3;
+  }
 
+  // ---------- Torschuss-Arten (Open Play) ----------
+  // Großchance, normaler Schuss im Strafraum, Kopfball, Distanzschuss. Mittelwerte der xG je Art
+  // aus StatsBomb; die Mischung verschiebt sich mit der Überlegenheit (q) und dem Abwehrblock.
+  var SHOT_TYPES = {
+    big: { a: 0.2, b: 0.4, e: 1.2 },      // xG = a + b·u^e (u gleichverteilt)
+    box: { a: 0.035, b: 0.15, e: 1.6 },
+    head: { a: 0.03, b: 0.15, e: 1.8 },
+    long: { a: 0.012, b: 0.05, e: 1.5 }
+  };
+  function typeMean(t) { var s = SHOT_TYPES[t]; return s.a + s.b / (1 + s.e); }
+  function shotMix(q, block) {
+    var bk = block - 0.5;
+    var big = 0.085 * q * (1 - 0.3 * bk), head = 0.15 * (1 + 0.2 * bk), long = 0.27 / Math.sqrt(q) * (1 + 0.3 * bk);
+    var box = Math.max(0.2, 1 - big - head - long);
+    var t = big + head + long + box;
+    return { big: big / t, head: head / t, long: long / t, box: box / t };
+  }
+  function mixMean(mx) { return mx.big * typeMean("big") + mx.box * typeMean("box") + mx.head * typeMean("head") + mx.long * typeMean("long"); }
+  var CONV = { counter: 0.24, corner: 0.25 * 0.075, fk: 0.06, pen: 0.78 };
+
+  // ---------- Spieler und Mannschaften ----------
+  function mkPlayer(p, side, stam) {
+    var nat = p.nat || p.pos;
+    var pl = { no: p.no, pos: p.pos, nat: nat, n: p.n || null, r: p.r || 74, base: p.base, f: p.f || 0, side: side,
+      a: p.a || playerAttrs({ n: p.n, pos: p.pos, nat: nat, r: p.r, base: p.base, f: p.f }),
+      stam: stam === undefined ? 100 : stam, rating: 6.0, booked: false, off: false, subbed: false, inj: false,
+      on: 0, offAt: null, st: { sh: 0, sot: 0, g: 0, a: 0, kp: 0, def: 0, sv: 0, xgSaved: 0 } };
+    pl.fit = posFit(nat, pl.pos);
+    pl.fresh0 = pl.stam;
+    return pl;
+  }
+  function label(p) { return p.n ? p.n : "die Nummer " + p.no; }
+  function shortLabel(p) { return p.n ? lastName(p.n) : "Nr. " + p.no; }
+  function onField(X) { return X.players.filter(function (p) { return !p.off; }); }
+  function keeperOf(X) { return onField(X).filter(function (p) { return p.pos === "TW"; })[0] || null; }
+  // Stil von Fenerbahçe aus Taktik und Spielern
+  function fbStyleFor(list, tKey) {
+    var pacAtt = 0, n = 0, phy = 0, nP = 0, agg = 0, wr = 0;
+    list.forEach(function (p) {
+      var a = p.a || playerAttrs(p);
+      if (/ST|RA|LA|ZOM/.test(p.pos)) { pacAtt += a.pac; n++; }
+      if (/IV|ST/.test(p.pos)) { phy += a.phy; nP++; }
+      agg += a.agg; wr += a.wr;
+    });
+    var k = list.length || 1;
+    return {
+      f: formationOf(list), block: tKey === "def" ? 0.65 : tKey === "off" ? 0.3 : 0.45,
+      press: clamp((wr / k - 60) / 40 + (tKey === "off" ? 0.15 : tKey === "def" ? -0.15 : 0), 0, 1),
+      counter: clamp(((n ? pacAtt / n : 75) - 65) / 30, 0, 1), poss: 0,
+      setp: clamp(((nP ? phy / nP : 75) - 60) / 35, 0, 1), agg: clamp(agg / k / 100, 0.3, 0.9)
+    };
+  }
+  function mkSide(key, o) {
+    var X = {
+      key: key, isFb: key === "fb", name: o.name, players: o.xi, bench: o.bench, tKey: o.tKey, tBase: o.tKey, style: o.style,
+      adj: o.adj || 0, r: o.r, home: o.home,
+      g: 0, shots: 0, sot: 0, xg: 0, corners: 0, fouls: 0, y: 0, red: 0, poss: 0, big: 0, scorers: [], log: [],
+      subs: 0, windows: 0, plan: [], men: 11, ch: {}, U: null, base: 1.4, hz: {}, conv: 0.1, fin: 70, pB: 0.5, aiNote: null
+    };
+    return X;
+  }
+  function refreshUnits(X) {
+    var on = onField(X);
+    var u = unitsToRating(unitsRaw(on));
+    var adj = X.adj + (X.isFb ? fbAnchor() : 0), gkAdj = X.adj * 0.5;
+    if (!X.isFb) {
+      // Gegner: Ausgangswert exakt aus Vereinsstärke und Stil (wie in der Prognose), danach wirken
+      // nur die Veränderungen im Spiel (Kraft, Wechsel, Platzverweise, Verletzungen)
+      if (!X.u0) X.u0 = u;
+      var b = oppUnits(X.r, X.style);
+      X.U = { att: b.att + u.att - X.u0.att, ctl: b.ctl + u.ctl - X.u0.ctl, def: b.def + u.def - X.u0.def, gk: b.gk + u.gk - X.u0.gk };
+      X.fin = u.fin; X.men = on.length;
+      return;
+    }
+    X.U = { att: u.att + adj, ctl: u.ctl + adj, def: u.def + adj, gk: u.gk + gkAdj };
+    X.fin = u.fin;
+    X.men = on.length;
+  }
+  // Raten aus dem gemeinsamen Erwartungsmodell neu berechnen (bei Wechseln, Karten, Kraftverlust)
+  function refreshRates() {
+    refreshUnits(M.fb); refreshUnits(M.op);
+    var e = expectedGoals({ uFb: M.fb.U, uOp: M.op.U, venue: M.venue, oppName: M.opp.n, derby: M.derby, sFb: M.fb.style, sOp: M.op.style });
+    M.fb.base = e.baseF; M.op.base = e.baseO;
+    [[M.fb, M.op, e.dF], [M.op, M.fb, e.dO]].forEach(function (pr) {
+      var X = pr[0], Y = pr[1];
+      X.q = Math.exp(0.35 * gStrength(pr[2]));
+      X.mix = shotMix(X.q, Y.style.block);
+      X.conv = mixMean(X.mix);
+      var k = X.base / TIME_SUM * M.cal;
+      X.hz = { open: SHARE.open * k / X.conv, counter: SHARE.counter * k / CONV.counter * counterF(X.style),
+        corner: SHARE.corner * k / CONV.corner * (0.7 + 0.6 * X.style.setp) / (0.7 + 0.6 * 0.55), fk: SHARE.fk * k / CONV.fk, pen: SHARE.pen * k / CONV.pen };
+    });
+    var bF = M.op.style.block, bO = M.fb.style.block;
+    var tFp = (TACTICS[M.fb.tKey] || TACTICS.bal).poss, tOp = (TACTICS[M.op.tKey] || TACTICS.bal).poss;
+    var p = 0.5 + (M.fb.U.ctl - M.op.U.ctl) / 100 + 0.08 * (bF - 0.5) - 0.08 * (bO - 0.5) + (M.venue === "home" ? 0.02 : M.venue === "away" ? -0.02 : 0) + tFp - tOp;
+    M.fb.pB = clamp(p, 0.25, 0.77); M.op.pB = 1 - M.fb.pB;
+    M.ratesAt = M.minute;
+    if (M.fl && M.fl.trace) (M.trace = M.trace || []).push({ m: M.minute, h: M.half, U: [M.fb.U, M.op.U], f: formationOf(onField(M.fb)), base: [M.fb.base, M.op.base], st: onField(M.fb).map(function (q) { return q.pos + ":" + Math.round(q.stam) + ":" + q.fit.toFixed(2); }).join(" ") });
+  }
+
+  function newMatch(cfg) {
+    var seed = cfg.seed !== undefined ? cfg.seed >>> 0 : newSeed();
+    var venue = cfg.venue || "home";
+    var opp = cfg.opp, style = styleOf(opp.n);
+    var tKey = cfg.tactic || prefs.tactic || "bal";
+    var fresh = cfg.fresh || {};
+    var xi = (cfg.xi || squad.xi).map(function (p) { return mkPlayer(p, "fb", fresh[p.n] !== undefined ? fresh[p.n] : 100); });
+    var bench = (cfg.bench || squad.bench).map(function (p) { return mkPlayer(p, "fb", fresh[p.n] !== undefined ? fresh[p.n] : 100); });
+    var oppR = opp.r + (cfg.euro && LEAGUE.some(function (t) { return t.n === opp.n; }) ? XG.EURO_TR : 0);
+    var osq = oppSquad(opp.n, oppR, style);
+    var oxi = osq.xi.map(function (p) { return mkPlayer(p, "op", 100); }), obench = osq.bench.map(function (p) { return mkPlayer(p, "op", 100); });
+    var oKey = "bal";   // Grundhaltung steckt im Stil (Block, Konter); der Trainer stellt im Spiel um
+    var m = {
+      cfg: cfg, live: !!cfg.live, season: cfg.season || null, opp: opp, seed: seed, rng: makeRng(seed),
+      venue: venue, fbHome: venue !== "away", neutral: venue === "neutral",
+      ko: !!cfg.ko, agg: cfg.agg || null, comp: cfg.comp, derby: !!opp.rival,
+      cal: ENGINE_CAL, fl: cfg.flags || {},
+      minute: 0, half: 1, added1: 3, added2: 6, added3: 1, added4: 2, addKnown: [false, false, false, false],
+      cnt: [{ g: 0, s: 0, i: 0, c: 0 }, { g: 0, s: 0, i: 0, c: 0 }, { g: 0, s: 0, i: 0, c: 0 }, { g: 0, s: 0, i: 0, c: 0 }],
+      goalMins: [], penCount: 0, ogCount: 0, momentum: 0, done: false, pens: null, et: false,
+      conf: cfg.round ? cfg.round.map(function (r) { return { h: r.h, a: r.a, goals: r.goals, ch: 0, ca: 0, hit: 0 }; }) : null,
+      ref: 1, mult: 1, speed: prefs.speed, log: [], cardLog: [], injLog: [], oppInj: 0
+    };
+    M = m;
+    M.ref = Math.exp(0.18 * rnorm());               // Schiedsrichter: streng oder großzügig
+    var euro = !!cfg.euro;
+    M.fb = mkSide("fb", { name: FB_NAME, xi: xi, bench: bench, tKey: tKey, style: null, adj: (cfg.fbAdj || 0) + (euro ? XG.EURO_TR : 0), r: 84, home: venue === "home" });
+    M.fb.style = fbStyleFor(xi, tKey);
+    M.op = mkSide("op", { name: opp.n, xi: oxi, bench: obench, tKey: oKey, style: style, adj: 0, r: oppR, home: venue === "away" });
+    M.onPitch = M.fb.players; M.bench = M.fb.bench;   // für Anzeige und Saison
+    [M.fb, M.op].forEach(planSubs);
+    refreshRates();
+    M.lam0 = expectedGoals({ uFb: M.fb.U, uOp: M.op.U, venue: venue, oppName: opp.n, derby: M.derby, tFb: TACTICS[tKey], tOp: TACTICS[oKey], sFb: M.fb.style, sOp: M.op.style });
+    return M;
+  }
+  var ENGINE_CAL = 0.87;   // gleicht die Spielverlaufs-Dynamik aus: Engine-Mittel = Erwartungsmodell
+
+  // ---------- Ereignisse ----------
+  function scoreHA() { return M.fbHome ? [M.fb.g, M.op.g] : [M.op.g, M.fb.g]; }
+  function emit(ev) {
+    ev.m = M.minute; ev.h = M.half; ev.min = minLabel(); ev.score = scoreHA();
+    M.log.push(ev);
+    if (M.live) liveEvent(ev);
+    return ev;
+  }
+  function minLabel() {
+    var m = M.minute, h = M.half;
+    if (h === 1 && m > 45) return "45+" + (m - 45) + "'";
+    if (h === 2 && m > 90) return "90+" + (m - 90) + "'";
+    if (h === 3 && m > 105) return "105+" + (m - 105) + "'";
+    if (h === 4 && m > 120) return "120+" + (m - 120) + "'";
+    return m + "'";
+  }
+  function fbPlayers() { return onField(M.fb); }
+  function totals() {
+    var fbT = M.fb.g + (M.agg ? M.agg[0] : 0), opT = M.op.g + (M.agg ? M.agg[1] : 0);
+    return { fb: fbT, op: opT };
+  }
+  // Spielstand aus Sicht von X (bei Rückspielen das Gesamtergebnis)
+  function leadOf(X) { var t = totals(); return X.isFb ? t.fb - t.op : t.op - t.fb; }
+
+  // ---------- Kraft ----------
+  function drain(X) {
+    var t = TACTICS[X.tKey] || TACTICS.bal, pr = X.style.press;
+    onField(X).forEach(function (p) {
+      var a = p.a, d = (0.34 + 0.32 * (1 - a.sta / 100)) * Math.sqrt(a.wr / 75) * t.drain * (0.92 + 0.16 * pr);
+      if (p.pos === "TW") d *= 0.3;
+      if (M.half >= 3) d *= 1.15;
+      p.stam = Math.max(5, p.stam - d);
+    });
+  }
+
+  // ---------- Spielstand-Effekte ----------
+  // StatsBomb: Führende schießen seltener (−20 % bei +1, −26 % bei +2), behalten aber die Qualität
+  // durch Konter; Zurückliegende drängen (+14 % / +20 %). Wirkung wächst mit der Spielzeit.
+  function stateMods(X, late) {
+    var L = leadOf(X), open = 1, counter = 1, poss = 0;
+    if (M.fl.noState) return { open: 1, counter: 1, poss: 0 };
+    var ramp = 0.45 + 0.55 * late;
+    if (L >= 3) { open = 0.8; counter = 1.15; poss = -0.05; }
+    else if (L === 2) { open = 0.9; counter = 1.25; poss = -0.045; }
+    else if (L === 1) { open = 0.93; counter = 1.3; poss = -0.035; }
+    else if (L === -1) { open = 1.08; counter = 0.9; poss = 0.035; }
+    else if (L <= -2) { open = L <= -3 ? 1.04 : 1.12; counter = 0.85; poss = 0.045; }
+    open = Math.pow(open, ramp); counter = Math.pow(counter, ramp); poss *= ramp;
+    // Unentschieden in der Schlussphase: der Außenseiter sichert den Punkt
+    if (L === 0 && late > 0.8 && !M.ko && X.base < (X.isFb ? M.op.base : M.fb.base) * 0.8) open *= 0.88;
+    // Derby: bei Gleichstand wird es in der Schlussphase vorsichtig (Istanbul-Derbys: 34 % Remis)
+    if (L === 0 && M.derby && late > 0.7) open *= 0.85;
+    return { open: open, counter: counter, poss: poss };
+  }
+  function menMod(X, Y) {
+    var d = X.men - Y.men;
+    if (d < 0) return Math.pow(XG.RED_OWN, Math.min(2, -d));
+    if (d > 0) return Math.pow(XG.RED_OPP, Math.min(2, d));
+    return 1;
+  }
+
+  // ---------- Eine Minute ----------
+  function step() {
+    if (M.done) return;
+    M.minute++;
+    var m = M.minute, h = M.half;
+    if (h === 1 && m === 1) emit({ type: "kickoff" });
+    if (h === 1 && m === 45 && !M.addKnown[0]) announceAdded(0);
+    if (h === 2 && m === 90 && !M.addKnown[1]) announceAdded(1);
+    if (h === 3 && m === 105 && !M.addKnown[2]) announceAdded(2);
+    if (h === 4 && m === 120 && !M.addKnown[3]) announceAdded(3);
+    var end = h === 1 ? 45 + M.added1 : h === 2 ? 90 + M.added2 : h === 3 ? 105 + M.added3 : 120 + M.added4;
+    if (m > end) { endOfHalf(); return; }
+    if (h === 2 && m === 46) emit({ type: "restart" });
+    playMinute(m, h);
+  }
+  function announceAdded(i) {
+    var c = M.cnt[i];
+    var v = i === 0 ? 1 + 0.45 * c.g + 1.0 * c.i + 0.2 * c.c + 0.35 * c.s + R() * 1.6
+      : i === 1 ? 1.4 + 0.45 * c.g + 0.22 * c.s + 1.0 * c.i + 0.2 * c.c + R() * 2.2
+      : 0.5 + 0.4 * c.g + 0.6 * c.i + R() * 1.2;
+    v = Math.round(clamp(v, i === 1 ? 2 : 0, i === 1 ? 12 : i === 0 ? 8 : 4));
+    if (i === 0) M.added1 = v; else if (i === 1) M.added2 = v; else if (i === 2) M.added3 = v; else M.added4 = v;
+    M.addKnown[i] = true;
+    if (v > 0) emit({ type: "added", n: v });
+  }
+  function endOfHalf() {
+    var h = M.half;
+    if (h === 1) {
+      emit({ type: "ht" });
+      M.half = 2; M.minute = 45;
+      [M.fb, M.op].forEach(function (X) { halfTimeCoach(X); onField(X).forEach(function (p) { p.stam = Math.min(100, p.stam + 6); }); });
+      refreshRates();
+      return;
+    }
+    if (h === 2 || h === 4) {
+      var t = totals();
+      if (h === 2 && M.ko && t.fb === t.op) {
+        emit({ type: "et" });
+        M.et = true; M.half = 3; M.minute = 90;
+        [M.fb, M.op].forEach(function (X) { X.maxSubs = 6; X.maxWin = X.windows + 1; onField(X).forEach(function (p) { p.stam = Math.min(100, p.stam + 3); }); });
+        refreshRates();
+        return;
+      }
+      if (h === 4 && t.fb === t.op) shootout();
+      endMatch();
+      return;
+    }
+    if (h === 3) { emit({ type: "et-ht" }); M.half = 4; M.minute = 105; refreshRates(); }
+  }
+
+  function playMinute(m, h) {
+    drain(M.fb); drain(M.op);
+    if (m - M.ratesAt >= 5 || M.dirty) { M.dirty = false; refreshRates(); }
+    var late = h >= 3 ? 1 : Math.min(1, m / 90), w = timeW(h, m);
+    var sF = stateMods(M.fb, late), sO = stateMods(M.op, late);
+    var tF = TACTICS[M.fb.tKey] || TACTICS.bal, tO = TACTICS[M.op.tKey] || TACTICS.bal;
+    var pFb = M.fb.pB + sF.poss - sO.poss - 0.07 * (M.op.men - M.fb.men) + M.momentum * 0.03;
+    pFb = clamp(pFb, 0.2, 0.8);
+    var fbBall = R() < pFb;
+    var A = fbBall ? M.fb : M.op, B = fbBall ? M.op : M.fb;
+    A.poss++;
+    var sA = fbBall ? sF : sO, sB = fbBall ? sO : sF, tA = fbBall ? tF : tO, tB = fbBall ? tO : tF;
+    var mA = menMod(A, B), mB = menMod(B, A);
+    // Chancen der Mannschaft am Ball
+    var hOpen = A.hz.open * w * sA.open * tA.own * tB.opp * mA / A.pB;
+    if (R() < hOpen) openPlay(A, B, false);
+    if (R() < A.hz.corner * w * mA * Math.sqrt(sA.open) / A.pB) corner(A, B);
+    if (R() < A.hz.fk * w * mA / A.pB) freeKick(A, B);
+    if (R() < A.hz.pen * w * mA * Math.sqrt(sA.open) / A.pB) penaltyKick(A, B);
+    // Konter der anderen Mannschaft nach Ballgewinn
+    var hC = B.hz.counter * w * sB.counter * tB.counterOwn * tA.risk * mB / A.pB;
+    if (R() < hC) openPlay(B, A, true);
+    // Zweikämpfe und Fouls
+    var foulRate = 0.245 * (M.derby ? 1.15 : 1) * Math.sqrt(tA.foul * tB.foul);
+    if (R() < foulRate) foul(R() < 0.7 ? B : A, R() < 0.5 ? A : B, false);
+    if (M.derby && R() < 0.01) emit({ type: "derby" });
+    // Verletzungen
+    injuryCheck(M.fb); injuryCheck(M.op);
+    // Trainer
+    coach(M.fb, m); coach(M.op, m);
+    // Ballbesitz-Momentum (nur für die Anzeige und leicht für den Ballbesitz)
+    M.momentum = clamp(M.momentum * 0.9 + (fbBall ? 0.04 : -0.04) + (R() - 0.5) * 0.06, -1, 1);
+    // Defensivaktionen fließen in die Noten
+    if (R() < 0.35) { var dp = rweighted(onField(B), function (p) { return (UNIT_W.def[p.pos] || 0) * p.a.def / 70; }); if (dp) { dp.st.def++; dp.rating += 0.025; } }
+    if (R() < 0.3) { var cp = rweighted(onField(A), function (p) { return (UNIT_W.ctl[p.pos] || 0) * p.a.pas / 70; }); if (cp) cp.rating += 0.012; }
+    confStep();
+  }
+
+  // ---------- Torchancen ----------
+  function pickShooter(X, type) {
+    var list = onField(X).filter(function (p) { return p.pos !== "TW"; });
+    if (!list.length) return onField(X)[0];
+    return rweighted(list, function (p) {
+      var a = p.a, w = SHOOT_W[p.pos] || 0.3;
+      if (type === "head") w = (p.pos === "ST" ? 3 : p.pos === "IV" ? 1.6 : /ZDM|ZM/.test(p.pos) ? 0.8 : 0.6) * Math.pow(a.phy / 75, 3);
+      else if (type === "long") w = (p.pos === "ZOM" ? 2 : p.pos === "ZM" ? 1.6 : /RA|LA/.test(p.pos) ? 1.4 : p.pos === "ZDM" ? 1.1 : p.pos === "ST" ? 0.8 : 0.3) * Math.pow((a.fin + a.pas) / 150, 3);
+      else w *= Math.pow(a.fin / 75, 3);
+      return w * (0.7 + 0.3 * p.stam / 100);
+    });
+  }
+  function pickAssist(X, shooter, type) {
+    var mates = onField(X).filter(function (p) { return p !== shooter && p.pos !== "TW"; });
+    if (!mates.length) return null;
+    return rweighted(mates, function (p) {
+      var w = ASSIST_WEIGHT[p.pos] || 0.5;
+      if (type === "head") w *= /RV|LV|RA|LA/.test(p.pos) ? 1.8 : 0.7;
+      return w * Math.pow(p.a.pas / 75, 2);
+    });
+  }
+  function drawXg(type) { var s = SHOT_TYPES[type]; return s.a + s.b * Math.pow(R(), s.e); }
+  // Post-Shot-Modell: Abschlussqualität des Schützen (relativ zum Teamschnitt) gegen den Torwart
+  function goalProb(xg, shooter, X, Y) {
+    var gk = keeperOf(Y), gkv = gk ? gk.a.gk * (0.6 + 0.4 * gk.fit) * staminaF(gk.stam) + Y.adj * 0.5 : 25;
+    return clamp(sig(logit(clamp(xg, 0.005, 0.97)) + 0.012 * (shooter.a.fin - X.fin) - 0.0083 * (gkv - XG.GKREF)), 0.003, 0.97);
+  }
+  function openPlay(X, Y, counter) {
+    var type;
+    if (counter) type = R() < 0.55 ? "big" : "box";
+    else {
+      var mx = X.mix, u = R();
+      type = u < mx.big ? "big" : u < mx.big + mx.box ? "box" : u < mx.big + mx.box + mx.head ? "head" : "long";
+    }
+    var xg = counter ? (type === "big" ? 0.18 + 0.4 * Math.pow(R(), 1.3) : 0.07 + 0.18 * Math.pow(R(), 1.4)) : drawXg(type);
+    shoot(X, Y, { type: type, xg: xg, counter: counter });
+  }
+  function shoot(X, Y, o) {
+    var shooter = o.shooter || pickShooter(X, o.type);
+    var p = goalProb(o.xg, shooter, X, Y);
+    X.shots++; X.xg += o.xg; shooter.st.sh++;
+    var cat = o.rebound ? "reb" : o.counter ? "counter" : o.setp || "open";
+    var ch = X.ch[cat] || (X.ch[cat] = { n: 0, xg: 0, p: 0 }); ch.n++; ch.xg += o.xg; ch.p += p;
+    if (o.type === "big") X.big++;
+    var assist = o.noAssist ? null : (R() < (o.type === "long" ? 0.45 : o.counter ? 0.85 : 0.78) ? pickAssist(X, shooter, o.type) : null);
+    if (R() < p) {
+      // 3 % der Tore sind Eigentore (Abfälscher)
+      if (!o.pen && R() < 0.03) { ownGoal(X, Y); return; }
+      goal(X, Y, shooter, assist, o);
+      return;
+    }
+    var T = o.type === "big" ? 0.6 : o.type === "box" ? 0.36 : o.type === "head" ? 0.33 : 0.24;
+    var onT = R() < Math.max(0, T - p) / (1 - p);
+    var post = !onT && R() < 0.05;
+    var gk = keeperOf(Y);
+    if (onT) { X.sot++; shooter.st.sot++; shooter.rating += 0.08; if (gk) { gk.st.sv++; gk.rating += 0.12 + o.xg * 1.4; } }
+    if (o.type === "big") shooter.rating -= onT ? 0.12 : 0.22;
+    if (assist && o.xg > 0.15) { assist.st.kp++; assist.rating += 0.12; }
+    emit({ type: onT ? "save" : post ? "post" : "miss", side: X.key, p: label(shooter), ps: shortLabel(shooter), k: gk ? shortLabel(gk) : null, shot: o.type, xg: o.xg, counter: !!o.counter, setp: o.setp || null });
+    // Abpraller nach einer Parade
+    if (onT && R() < 0.12 && !o.rebound && !M.fl.noReb) shoot(X, Y, { type: "box", xg: 0.08 + 0.2 * R(), rebound: true, noAssist: true });
+  }
+  function goal(X, Y, shooter, assist, o) {
+    X.g++; shooter.st.g++;
+    shooter.rating += o.pen ? 0.75 : 1.05; if (assist) { assist.st.a++; assist.rating += 0.6; }
+    X.sot++; shooter.st.sot++;
+    if (X.isFb) X.log.push({ n: shooter.n, a: assist ? assist.n : null });
+    X.scorers.push(shortLabel(shooter) + " " + minLabel() + (o.pen ? " (E)" : ""));
+    goalSide(X, Y);
+    emit({ type: "goal", side: X.key, p: label(shooter), ps: shortLabel(shooter), pn: shooter.n, a: assist ? shortLabel(assist) : null, shot: o.type, xg: o.xg, pen: !!o.pen, counter: !!o.counter, setp: o.setp || null });
+  }
+  function ownGoal(X, Y) {
+    X.g++; M.ogCount++;
+    var og = rweighted(onField(Y), function (p) { return /IV|RV|LV/.test(p.pos) ? 3 : p.pos === "ZDM" ? 1.2 : p.pos === "TW" ? 0.4 : 0.4; });
+    if (og) og.rating -= 0.7;
+    X.scorers.push("Eigentor " + minLabel());
+    goalSide(X, Y);
+    emit({ type: "og", side: X.key, p: og ? label(og) : null, ps: og ? shortLabel(og) : null });
+  }
+  function goalSide(X, Y) {
+    M.goalMins.push({ m: M.minute, h: M.half, side: X.key });
+    M.cnt[M.half - 1].g++;
+    M.momentum = clamp(M.momentum + (X.isFb ? 0.35 : -0.35), -1, 1);
+    onField(Y).forEach(function (p) { if (p.pos === "TW") p.rating -= 0.25; else if (/IV|RV|LV/.test(p.pos)) p.rating -= 0.12; });
+    M.dirty = true;
+  }
+  function corner(X, Y) {
+    X.corners++;
+    if (R() < 0.25) {
+      var head = R() < 0.7;
+      shoot(X, Y, { type: head ? "head" : "box", xg: head ? 0.03 + 0.12 * Math.pow(R(), 1.6) : 0.04 + 0.14 * Math.pow(R(), 1.8), setp: "corner" });
+    }
+  }
+  function freeKick(X, Y) {
+    var fouler = foul(Y, X, true);
+    var taker = rweighted(onField(X).filter(function (p) { return p.pos !== "TW"; }), function (p) { return Math.pow((p.a.fin + p.a.pas) / 150, 6); });
+    if (!taker) return;
+    shoot(X, Y, { type: "long", xg: 0.03 + 0.07 * Math.pow(R(), 1.3), shooter: taker, noAssist: true, setp: "fk" });
+  }
+  function penTaker(X) {
+    var list = onField(X).filter(function (p) { return p.pos !== "TW"; });
+    return list.sort(function (a, b) { return b.a.pen - a.a.pen; })[0] || null;
+  }
+  function penaltyKick(X, Y) {
+    M.penCount++;
+    var fouler = foul(Y, X, "pen");
+    var taker = penTaker(X); if (!taker) return;
+    var gk = keeperOf(Y), gkv = gk ? gk.a.gk : 30;
+    var p = clamp(sig(logit(0.78) + 0.03 * (taker.a.pen - 78) - 0.022 * (gkv - 76)), 0.5, 0.92);
+    X.shots++; X.xg += 0.78; taker.st.sh++;
+    emit({ type: "pen-awarded", side: X.key, p: label(taker), ps: shortLabel(taker), f: fouler ? shortLabel(fouler) : null });
+    if (R() < p) { goal(X, Y, taker, null, { type: "pen", xg: 0.78, pen: true }); return; }
+    var saved = R() < 0.7;
+    if (saved) { X.sot++; taker.st.sot++; if (gk) { gk.rating += 0.9; gk.st.sv++; } }
+    taker.rating -= 0.5;
+    emit({ type: "pen-miss", side: X.key, p: label(taker), ps: shortLabel(taker), k: gk ? shortLabel(gk) : null, saved: saved });
+  }
+
+  // ---------- Fouls und Karten ----------
+  // Süper Lig 2022–26: 25,6 Fouls, 4,55 Gelbe, 0,22 Rote je Spiel. Derby: Gelb ×1,4–1,5, Rot ×2–2,7.
+  function foul(F, V, kind) {
+    var list = onField(F); if (!list.length) return null;
+    var p = rweighted(list, function (q) {
+      var w = { IV: 1.4, ZDM: 1.6, ZM: 1.2, RV: 1.2, LV: 1.2, ST: 1, RA: 0.8, LA: 0.8, ZOM: 0.9, TW: 0.05 }[q.pos] || 1;
+      return w * Math.pow(q.a.agg / 72, 1.5) * (q.booked ? 0.55 : 1) * (1.15 - 0.3 * q.stam / 100);
+    });
+    F.fouls++;
+    var c = 0.178 * cardW(M.half, M.minute) * M.ref * (M.derby ? 1.3 : 1) * (F.home ? 0.9 : M.neutral ? 1 : 1.08) * Math.pow(p.a.agg / 72, 0.8) * (p.booked ? 0.7 : 1);
+    if (kind === "pen") c = 0.32 * M.ref;
+    if (kind === true) c *= 1.15;     // Foul in Tornähe
+    if (leadOf(F) < 0 && M.minute > 70) c *= 1.1;
+    if (R() < c) card(F, p, kind === "pen");
+    return p;
+  }
+  function card(F, p, penFoul) {
+    var straight = R() < (penFoul ? 0.08 : 0.022) * (M.derby ? 1.8 : 1);
+    M.cnt[M.half - 1].c++;
+    if (straight || p.booked) {
+      var second = !straight && p.booked;
+      if (second) F.y++;
+      p.off = true; p.offAt = M.minute; F.red++; p.rating -= 1.5;
+      if (F.isFb) M.cardLog.push({ n: p.n, t: second ? "yr" : "r" });
+      M.dirty = true;
+      emit({ type: "red", side: F.key, p: label(p), ps: shortLabel(p), second: second });
+      // Torwart vom Platz: ein Feldspieler muss ins Tor (oder ein Wechsel)
+      if (p.pos === "TW") replaceKeeper(F);
+      coachAfterRed(F);
+    } else {
+      p.booked = true; F.y++; p.rating -= 0.3;
+      if (F.isFb) M.cardLog.push({ n: p.n, t: "y" });
+      emit({ type: "yellow", side: F.key, p: label(p), ps: shortLabel(p) });
+    }
+  }
+
+  // ---------- Verletzungen ----------
+  // ~0,3 verletzungsbedingte Wechsel je Team und Spiel (StatsBomb, 5-Wechsel-Ära). Müde und
+  // nicht ausgeruhte Spieler verletzen sich häufiger.
+  function injuryCheck(X) {
+    var list = onField(X); if (!list.length) return;
+    var tot = 0, ws = list.map(function (p) {
+      var f = 3.0e-4 * (1 + 1.2 * Math.max(0, 0.75 - p.stam / 100)) * (p.fresh0 !== undefined ? 1 + (100 - p.fresh0) / 40 : 1) * (M.derby ? 1.1 : 1) * (p.pos === "TW" ? 0.25 : 1);
+      tot += f; return f;
+    });
+    if (R() >= tot) return;
+    var x = R() * tot, p = list[list.length - 1];
+    for (var i = 0; i < list.length; i++) { x -= ws[i]; if (x <= 0) { p = list[i]; break; } }
+    p.inj = true;
+    if (X.isFb) M.injLog.push(p.n); else M.oppInj++;
+    M.cnt[M.half - 1].i++;
+    emit({ type: "injury", side: X.key, p: label(p), ps: shortLabel(p) });
+    if (!makeSub(X, p, "injury")) {
+      p.off = true; p.offAt = M.minute; M.dirty = true;
+      emit({ type: "short", side: X.key, p: shortLabel(p) });
+      if (p.pos === "TW") replaceKeeper(X);
+    }
+  }
+  function replaceKeeper(X) {
+    var gk = X.bench.filter(function (b) { return !b.used && b.nat === "TW"; })[0];
+    var outs = onField(X).filter(function (q) { return q.pos !== "TW"; });
+    if (gk && X.subs < (X.maxSubs || 5) && outs.length) {
+      var off = outs.sort(function (a, b) { return a.rating - b.rating; })[0];
+      doSub(X, off, gk, "TW", "keeper");
+    } else if (outs.length) {
+      var f = outs.sort(function (a, b) { return b.a.phy - a.a.phy; })[0];
+      f.pos = "TW"; f.fit = posFit(f.nat, "TW"); M.dirty = true;
+      emit({ type: "keeper-field", side: X.key, p: shortLabel(f) });
+    }
+  }
+
+  // ---------- Trainer: Wechsel und Taktik ----------
+  // 5-Wechsel-Ära (StatsBomb 2021–24): im Mittel 4,3 Wechsel je Team, Zeitpunkte ≈ 57', 67', 74',
+  // 80', 84', ~8 % zur Pause. Höchstens drei Unterbrechungen (plus Halbzeit).
+  function planSubs(X) {
+    var k = (function () { var u = R(); return u < 0.56 ? 5 : u < 0.76 ? 4 : u < 0.93 ? 3 : 2; })();
+    var t1 = clamp(Math.round(62 + 8 * rnorm()), 46, 78), t2 = clamp(t1 + Math.round(11 + 4 * rnorm()), t1 + 4, 86), t3 = clamp(t2 + Math.round(9 + 3 * rnorm()), t2 + 3, 90);
+    var a = k === 5 && R() < 0.35 ? 2 : 1, b = k - a >= 3 ? 2 : Math.min(1, k - a), c = Math.max(0, k - a - b);
+    X.plan = [{ t: t1, n: a }, { t: t2, n: b }, { t: t3, n: c }].filter(function (x) { return x.n > 0; });
+    X.maxSubs = 5; X.maxWin = 3;
+  }
+  function halfTimeCoach(X) {
+    var L = leadOf(X), p = L < 0 ? 0.42 : L === 0 ? 0.18 : 0.1;
+    if (R() < p && X.subs < X.maxSubs) {
+      var n = L < 0 && R() < 0.35 ? 2 : 1;
+      for (var i = 0; i < n; i++) makeSub(X, null, L < 0 ? "attack" : "fresh", true);
+      if (X.plan.length) X.plan[0].n = Math.max(0, X.plan[0].n - n);
+    }
+  }
+  function coach(X, m) {
+    if (M.half === 1) return;
+    var L = leadOf(X), t = M.half >= 3 ? 90 + (m - 90) * 0.7 : m;
+    // Taktik anpassen
+    var want = X.tBase;
+    var fav = X.base >= (X.isFb ? M.op.base : M.fb.base);
+    if (L < 0 && t >= (L <= -2 ? 55 : 62)) want = "off";
+    else if (L === 1 && t >= (fav ? 82 : 72)) want = "def";
+    else if (L >= 2 && t >= 70) want = "def";
+    else if (L === 0 && t >= 80 && fav && !M.ko && X.home) want = X.tBase === "def" ? "bal" : "off";
+    if (L >= 3) want = "bal";
+    if (M.fl.noTac) want = X.tKey;
+    if (want !== X.tKey) {
+      X.tKey = want; M.dirty = true;
+      if (!X.isFb) X.style = styleOf(X.name);
+      else X.style = fbStyleFor(onField(X), want);
+      emit({ type: "tactic", side: X.key, t: want });
+    }
+    // Wechselplan
+    if (X.subs >= X.maxSubs || X.windows >= X.maxWin) return;
+    var pl = X.plan[0];
+    var due = pl && t >= pl.t - (L < 0 && t > 50 ? 4 : 0);
+    var tired = onField(X).some(function (p) { return p.pos !== "TW" && p.stam < 38; }) && t >= 65;
+    if (!due && !tired) return;
+    var n = pl ? Math.max(1, pl.n) : 1;
+    X.windows++;
+    var need = L < 0 && t >= 55 ? "attack" : L > 0 && t >= 70 ? "protect" : "fresh";
+    for (var i = 0; i < n && X.subs < X.maxSubs; i++) makeSub(X, null, i === 0 ? need : "fresh", true);
+    if (pl) X.plan.shift();
+  }
+  function coachAfterRed(X) {
+    // Nach Platzverweis: Ordnung wiederherstellen (Stürmer raus, Verteidiger rein), wenn ein Verteidiger fehlt
+    var on = onField(X);
+    var defs = on.filter(function (p) { return /IV|RV|LV/.test(p.pos); }).length;
+    if (defs < 4 && X.subs < X.maxSubs && X.windows < X.maxWin && M.minute < 80 && M.half <= 2 && R() < 0.6) { X.windows++; makeSub(X, null, "shape", true); }
+  }
+  // Einen Wechsel ausführen. reason: injury | attack | protect | fresh | shape. Gibt false zurück, wenn keiner möglich ist.
+  function makeSub(X, forcedOff, reason, windowCounted) {
+    if (X.subs >= X.maxSubs) return false;
+    var bench = X.bench.filter(function (b) { return !b.used && !b.inj && b.nat !== "TW"; });
+    if (!bench.length) return false;
+    var on = onField(X);
+    var off = forcedOff;
+    if (!off) {
+      var outs = on.filter(function (p) { return p.pos !== "TW" && !(p.subbed && M.minute - p.on < 15); });
+      if (!outs.length) return false;
+      off = outs.map(function (p) {
+        var s = (100 - p.stam) * 0.9 + (6.6 - p.rating) * 10 - (p.r - 75) * 0.6;
+        if (p.booked && /IV|ZDM|RV|LV/.test(p.pos)) s += 12;
+        if (reason === "attack" && /IV|ZDM|RV|LV/.test(p.pos)) s += 14;
+        if (reason === "protect" && /ST|RA|LA|ZOM/.test(p.pos)) s += 16;
+        if (reason === "shape" && /ST|ZOM|RA|LA/.test(p.pos)) s += 30;
+        return { p: p, s: s };
+      }).sort(function (a, b) { return b.s - a.s; })[0].p;
+    }
+    var slot = off.pos;
+    var cand = bench.map(function (b) {
+      var target = slot;
+      if (reason === "attack" && !/ST|RA|LA|ZOM/.test(slot) && /ST|RA|LA|ZOM/.test(b.nat)) target = b.nat;
+      if (reason === "protect" && !/IV|ZDM|RV|LV/.test(slot) && /IV|ZDM|ZM/.test(b.nat)) target = b.nat;
+      if (reason === "shape" && /IV|RV|LV/.test(b.nat)) target = b.nat;
+      var fit = posFit(b.nat, target), v = (b.r + (b.f || 0)) * fit * staminaF(b.stam);
+      if (reason === "attack" && /ST|RA|LA|ZOM/.test(target)) v += 6;
+      if (reason === "protect" && /IV|ZDM/.test(target)) v += 6;
+      if (reason === "shape" && /IV|RV|LV/.test(target)) v += 8;
+      return { b: b, target: target, v: v };
+    }).sort(function (a, b) { return b.v - a.v; })[0];
+    doSub(X, off, cand.b, cand.target, reason);
+    return true;
+  }
+  function doSub(X, off, onP, pos, reason) {
+    off.off = true; off.subbed = true; off.offAt = M.minute;
+    onP.used = true;
+    var np = mkPlayer({ no: onP.no, pos: pos, nat: onP.nat, n: onP.n, r: onP.r, base: onP.base, f: onP.f, a: onP.a }, X.key, onP.stam);
+    np.subbed = true; np.on = M.minute; np.rating = 6.2; np.fresh0 = onP.fresh0;
+    X.players.push(np);
+    X.subs++;
+    M.cnt[M.half - 1].s++;
+    M.dirty = true;
+    if (X.isFb) X.style = fbStyleFor(onField(X), X.tKey);
+    emit({ type: "sub", side: X.key, p: shortLabel(np), off: shortLabel(off), reason: reason, pos: pos });
+  }
+
+  // ---------- Elfmeterschießen ----------
+  // ABAB-Reihenfolge, Abbruch sobald entschieden, Schützen nach Elfmeterwert, Torwart zählt.
+  function shootout() {
+    function takers(X) {
+      var l = onField(X).filter(function (p) { return p.pos !== "TW"; }).sort(function (a, b) { return b.a.pen - a.a.pen; });
+      var k = keeperOf(X); if (k) l.push(k);
+      return l;
+    }
+    var tf = takers(M.fb), to = takers(M.op), sF = 0, sO = 0, kicks = [], i = 0;
+    var first = R() < 0.5 ? "fb" : "op";
+    function kick(X, Y, list, n) {
+      var t = list[n % list.length], gk = keeperOf(Y), gkv = gk ? gk.a.gk : 30;
+      var p = clamp(sig(logit(0.76) + 0.03 * (t.a.pen - 75) - 0.02 * (gkv - 76) - (n >= 5 ? 0.1 : 0)), 0.45, 0.92);
+      var ok = R() < p;
+      kicks.push({ side: X.key, p: shortLabel(t), ok: ok });
+      if (ok) t.rating += 0.15; else { t.rating -= 0.4; if (gk) gk.rating += 0.4; }
+      return ok;
+    }
+    var A = first === "fb" ? M.fb : M.op, B = A === M.fb ? M.op : M.fb, la = A === M.fb ? tf : to, lb = B === M.fb ? tf : to, sA = 0, sB = 0;
+    for (i = 0; i < 60; i++) {
+      if (kick(A, B, la, i)) sA++;
+      if (i < 5 && (sA > sB + 5 - i || sB > sA + 4 - i)) break;
+      if (kick(B, A, lb, i)) sB++;
+      if (i < 5) { if (sA > sB + 4 - i || sB > sA + 4 - i) break; }
+      else if (sA !== sB) break;
+    }
+    if (sA === sB) { if (R() < 0.5) sA++; else sB++; }
+    sF = A === M.fb ? sA : sB; sO = A === M.fb ? sB : sA;
+    M.pens = { fb: sF, op: sO };
+    emit({ type: "shootout", kicks: kicks, fb: sF, op: sO });
+  }
+
+  function endMatch() {
+    M.done = true;
+    M.minute = M.half === 4 ? 120 + M.added4 : 90 + M.added2;
+    emit({ type: "ft" });
+    finishConf();
+    finish();
+  }
+  function finishConf() {
+    if (!M.conf) return;
+    M.conf.forEach(function (c) { c.ch = c.goals.filter(function (g) { return g.side === "h"; }).length; c.ca = c.goals.length - c.ch; });
+  }
+  function confStep() {
+    if (!M.conf) return;
+    var m = M.minute;
+    M.conf.forEach(function (c) {
+      c.hit = Math.max(0, c.hit - 1);
+      c.goals.forEach(function (g) {
+        var inHalf = M.half === 1 ? g.min <= 45 : g.min > 45;
+        if (inHalf && g.min === m && M.half <= 2) {
+          if (g.side === "h") c.ch++; else c.ca++;
+          c.hit = 6;
+          if (M.live) {
+            var t = findTeam(c.h);
+            addEvent(minLabel(), IC.ball, "Tor " + (t && t.st ? "im " + esc(t.st) : "bei " + esc(c.h)) + ": " + esc(c.h) + " " + c.ch + ":" + c.ca + " " + esc(c.a) + " (" + esc(g.side === "h" ? c.h : c.a) + ")", "conf-ev");
+          }
+        }
+      });
+    });
+  }
+
+  // ---------- Ergebnis ----------
+  function finish() {
+    var res = M.fb.g > M.op.g ? "w" : M.fb.g < M.op.g ? "l" : "d";
+    var endMin = M.minute;
+    // Zu-Null-Bonus und Ergebnis-Einfluss auf die Noten, Spielzeit-Gewichtung
+    [M.fb, M.op].forEach(function (X) {
+      var Y = X === M.fb ? M.op : M.fb, cs = Y.g === 0, rs = X.g > Y.g ? 0.2 : X.g < Y.g ? -0.2 : 0;
+      X.players.forEach(function (p) {
+        var mins = (p.offAt === null ? endMin : p.offAt) - p.on;
+        p.mins = Math.max(0, mins);
+        if (cs && p.mins >= 45) p.rating += p.pos === "TW" ? 0.6 : /IV|RV|LV/.test(p.pos) ? 0.35 : p.pos === "ZDM" ? 0.15 : 0;
+        p.rating += rs;
+        if (p.mins < 30) p.rating = 6.3 + (p.rating - 6.2) * 0.6;
+        p.rating = clamp(p.rating, 3, 10);
+      });
+    });
+    var fbAll = M.fb.players;
+    var best = fbAll.filter(function (p) { return p.mins > 0 || p.offAt === null; }).sort(function (a, b) { return b.rating - a.rating; })[0] || fbAll[0];
+    var minutes = {};
+    fbAll.forEach(function (p) { if (p.n) minutes[p.n] = (minutes[p.n] || 0) + p.mins; });
+    function sideStats(X) { return { shots: X.shots, sot: X.sot, xg: X.xg, corners: X.corners, fouls: X.fouls, y: X.y, red: X.red, poss: X.poss, big: X.big, subs: X.subs }; }
+    M.out = {
+      fg: M.fb.g, og: M.op.g, pens: M.pens, et: M.et, scorers: M.fb.scorers.slice(), goals: M.fb.log.slice(), motm: best.n,
+      cards: M.cardLog.slice(), injuries: M.injLog.slice(), goalMins: M.goalMins.slice(), penCount: M.penCount, ogCount: M.ogCount,
+      ratings: fbAll.map(function (p) { return { n: p.n, r: p.rating, mins: p.mins }; }), minutes: minutes,
+      st: { fb: sideStats(M.fb), op: sideStats(M.op) }, seed: M.seed, log: M.log,
+      formation: formationOf(M.fb.players.filter(function (p) { return !p.subbed; })), lambda: { fb: M.lam0 ? M.lam0.lf : null, op: M.lam0 ? M.lam0.lo : null },
+      added: [M.added1, M.added2], oppSubs: M.op.subs, oppInj: M.oppInj, subMins: M.fb.players.filter(function (p) { return p.subbed && p.on; }).map(function (p) { return p.on; })
+    };
+    M.out.res = res;
+    M.out.trace = M.trace; M.out.dbg = { ch: { fb: M.fb.ch, op: M.op.ch }, base: [M.fb.base, M.op.base], hz: [M.fb.hz, M.op.hz], conv: [M.fb.conv, M.op.conv], pB: M.fb.pB, U: [M.fb.U, M.op.U] };
+    matchDone();
+  }
+
+  function simulateSilently(cfg) {
+    cfg.live = false;
+    var prev = M;
+    newMatch(cfg);
+    var me = M;
+    while (!me.done) step();
+    M = prev;
+    return me.out;
+  }
+  // =====================================================================
+  // Live-Anzeige: übersetzt Engine-Ereignisse in Ticker, Ton und Grafik
+  // =====================================================================
   function addEvent(min, icon, html, cls) {
-    if (!M.live) return;
+    if (!M || !M.live) return;
     var li = document.createElement("li");
     if (cls) li.className = cls;
     li.innerHTML = '<span class="m">' + min + '</span><span class="ic">' + icon + '</span><span class="tx">' + html + "</span>";
@@ -1528,347 +2566,108 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
   }
   var IC = { ball: '<i class="ball"></i>', y: '<i class="yc"></i>', r: '<i class="rc"></i>', dot: '<i class="dot"></i>', wh: '<i class="whistle"></i>', sub: '<span class="sub">⇄</span>' };
 
-  function minLabel() {
-    var m = M.minute;
-    if (M.half === 1 && m > 45) return "45+" + (m - 45) + "'";
-    if (M.half === 2 && m > 90) return "90+" + (m - 90) + "'";
-    return m + "'";
-  }
-  function fbPlayers() { return M.onPitch.filter(function (p) { return !p.off; }); }
-
   var FB_GOAL = [
     "TOOOR! <b>{s}</b> trifft für Fenerbahçe!",
     "GOOOL! <b>{s}</b> schiebt eiskalt ein!",
     "Was für ein Treffer von <b>{s}</b>! Die Kanarienvögel jubeln!",
-    "<b>{s}</b> köpft ein! Fenerbahçe trifft!",
-    "Aus 18 Metern! <b>{s}</b> hämmert den Ball in den Winkel!"
+    "<b>{s}</b> vollendet sehenswert! Fenerbahçe trifft!",
+    "Aus 16 Metern! <b>{s}</b> hämmert den Ball in den Winkel!"
   ];
+  var FB_HEAD_GOAL = ["<b>{s}</b> steigt am höchsten und köpft ein!", "Kopfballtor! <b>{s}</b> nickt ein!"];
+  var FB_COUNTER_GOAL = ["Konter! <b>{s}</b> läuft allein auf das Tor zu und trifft!", "Blitzkonter über die Außen, <b>{s}</b> vollendet!"];
   var FB_DERBY_GOAL = [
     "DERBİ GOLÜ! <b>{s}</b> trifft gegen {t}! Das ganze Stadion bebt!",
     "<b>{s}</b> trifft im Derby! Die Sarı-Lacivertliler drehen durch!",
     "GOOOOL! <b>{s}</b>! Gegen {t} schmeckt so ein Tor doppelt!"
   ];
-  var OP_GOAL = [
-    "Tor für <b>{t}</b>. Die Nummer {no} trifft.",
-    "<b>{t}</b> schlägt zu. Die Nummer {no} vollendet einen Konter.",
-    "Gegentor. <b>{t}</b> trifft durch die Nummer {no} nach einer Ecke."
-  ];
-  var MISS_FB = ["{s} zieht ab – knapp vorbei.", "{s} schießt drüber.", "Abschluss von {s}, geblockt.", "{s} versucht es aus der Distanz, kein Problem für den Keeper."];
-  var SAVE_FB = ["Riesenchance! {s} scheitert am Torwart.", "{s} allein vor dem Tor – pariert!", "Pfosten! {s} hat Pech."];
-  var MISS_OP = ["{t} kommt zum Abschluss, vorbei.", "Schuss von {t}, geblockt von {d}.", "{t} versucht es aus der Distanz, drüber."];
-  var SAVE_OP = ["Was für eine Parade! {k} hält stark gegen {t}.", "Glanzparade von {k}!", "{t} trifft nur die Latte!"];
+  var OP_GOAL = ["Tor für <b>{t}</b>. {p} trifft.", "<b>{t}</b> schlägt zu, {p} vollendet.", "Gegentor. <b>{t}</b> trifft durch {p}."];
+  var OP_COUNTER_GOAL = ["Konter von <b>{t}</b>, {p} trifft. Fener war zu weit aufgerückt.", "<b>{t}</b> kontert eiskalt: {p} trifft."];
+  var MISS_FB = ["{s} zieht ab, knapp vorbei.", "{s} schießt drüber.", "Abschluss von {s}, geblockt.", "{s} versucht es aus der Distanz, kein Problem für den Keeper."];
+  var SAVE_FB = ["Riesenchance! {s} scheitert am Torwart.", "{s} allein vor dem Tor, pariert!"];
+  var MISS_OP = ["{t} kommt zum Abschluss, vorbei.", "Schuss von {t}, geblockt.", "{t} versucht es aus der Distanz, drüber."];
+  var SAVE_OP = ["Was für eine Parade! {k} hält stark gegen {t}.", "Glanzparade von {k}!", "{k} ist zur Stelle, {t} scheitert."];
   var DERBY_FLAVOR = ["Rudelbildung! Beide Teams geraten aneinander.", "Pfeifkonzert bei jedem Ballkontakt des Gegners.", "Der Schiedsrichter muss beruhigen, die Stimmung kocht."];
-
+  var TAC_TXT = { off: "stellt auf Offensive um und wirft alles nach vorne", def: "zieht sich zurück und verteidigt", bal: "stellt wieder auf normales Spiel um" };
   function fill(tpl, o) { return tpl.replace(/\{(\w+)\}/g, function (_, k) { return o[k] !== undefined ? o[k] : ""; }); }
-  function keeper() { var k = fbPlayers().filter(function (p) { return p.pos === "TW"; })[0]; return k ? lastName(k.n) : "der Keeper"; }
-  function defender() { var d = fbPlayers().filter(function (p) { return /IV|RV|LV/.test(p.pos); }); return d.length ? lastName(pick(d).n) : "der Abwehr"; }
+  function sideName(k) { return k === "fb" ? "Fenerbahçe" : M.opp.n; }
+  function scoreLine() { var s = scoreHA(); return s[0] + ":" + s[1]; }
 
-  function step() {
-    if (M.done) return;
-    M.minute++;
-    var m = M.minute;
-
-    if (M.half === 1 && m === 1) {
-      addEvent("1'", IC.wh, M.derby ? "Anpfiff zum Derby gegen " + esc(M.opp.n) + "! Gänsehaut-Atmosphäre." : "Anpfiff" + (M.fbHome && !M.neutral ? " im " + FB_STADIUM + ". Das Stadion ist voll." : "."));
-      sfxWhistle(1);
-    }
-    if (M.half === 1 && m > 45 + M.added1) {
-      addEvent("HZ", IC.wh, "Halbzeit. " + scoreLine() + ".");
-      sfxWhistle(2);
-      M.half = 2; M.minute = 45; render(); return;
-    }
-    if (M.half === 2 && m > 90 + M.added2) { endMatch(); return; }
-    if (m === 46 && M.half === 2) addEvent("46'", IC.wh, "Weiter geht's, die zweite Halbzeit läuft.");
-
-    var fbE = eff("fb"), opE = eff("op");
-    var d = (fbE - opE) / 9;
-    var pFb = Math.max(0.3, Math.min(0.7, 0.5 + d * 0.075 + M.momentum * 0.06));
-    var fbHasBall = rnd() < pFb;
-    M[fbHasBall ? "fb" : "op"].poss++;
-    M.momentum = Math.max(-1, Math.min(1, M.momentum * 0.9 + (fbHasBall ? 0.05 : -0.05) + (rnd() - 0.5) * 0.1));
-
-    // Spielstand-Effekt: wer zurückliegt, drängt (stärker je später), wer führt, verwaltet
-    var fbT = M.fb.g + (M.agg ? M.agg[0] : 0), opT = M.op.g + (M.agg ? M.agg[1] : 0);
-    var lead = fbHasBall ? fbT - opT : opT - fbT, late = Math.min(1, m / 90);
-    var stateF = lead < 0 ? 1 + Math.min(2, -lead) * 0.09 * (0.4 + late) : lead > 0 ? 1 - Math.min(2, lead) * 0.05 * (0.4 + late) : 1;
-    var halfF = M.half === 1 ? 0.92 : 1.07;           // ca. 45 % der Tore vor, 55 % nach der Pause
-    var shotP = 0.233 * halfF * stateF * (M.derby ? 0.94 : 1) * (fbHasBall ? M.tac.fb : M.tac.op);
-    if (rnd() < 0.003 * (1 + d * (fbHasBall ? 0.15 : -0.15))) penaltyKick(fbHasBall ? "fb" : "op");
-    else if (rnd() < shotP) shot(fbHasBall ? "fb" : "op", d);
-    else if (rnd() < 0.135) M[fbHasBall ? "fb" : "op"].corners++;
-
-    // Fouls (ca. 13 pro Team): meistens foult die Mannschaft ohne Ball
-    if (rnd() < 0.27 * (M.derby ? 1.15 : 1)) foul(rnd() < 0.8 ? (fbHasBall ? "op" : "fb") : (fbHasBall ? "fb" : "op"));
-    if (M.derby && rnd() < 0.012) addEvent(minLabel(), IC.dot, pick(DERBY_FLAVOR));
-    if (rnd() < 0.0025) injury();
-
-    if (M.autoSub && M.half === 2 && M.subs < 5 && (m === 61 || m === 68 || m === 76 || m === 83) && rnd() < 0.8) sub(null);
-
-    confStep();
-    render();
-  }
-
-  function confStep() {
-    if (!M.conf) return;
-    var m = M.minute;
-    M.conf.forEach(function (c) {
-      c.hit = Math.max(0, c.hit - 1);
-      c.goals.forEach(function (g) {
-        var inHalf = M.half === 1 ? g.min <= 45 : g.min > 45;
-        if (inHalf && g.min === m) {
-          if (g.side === "h") c.ch++; else c.ca++;
-          c.hit = 6;
-          var t = findTeam(c.h);
-          addEvent(minLabel(), IC.ball, "Tor " + (t && t.st ? "im " + esc(t.st) : "bei " + esc(c.h)) + ": " + esc(c.h) + " " + c.ch + ":" + c.ca + " " + esc(c.a) + " (" + esc(g.side === "h" ? c.h : c.a) + ")", "conf-ev");
+  function liveEvent(ev) {
+    var fb = ev.side === "fb", t = esc(M.opp.n), sc = " <b>" + ev.score[0] + ":" + ev.score[1] + "</b>";
+    switch (ev.type) {
+      case "kickoff":
+        addEvent("1'", IC.wh, M.derby ? "Anpfiff zum Derby gegen " + t + "! Gänsehaut-Atmosphäre." : "Anpfiff" + (M.fbHome && !M.neutral ? " im " + FB_STADIUM + " in Kadıköy. Das Stadion ist voll." : "."));
+        sfxWhistle(1); break;
+      case "added": addEvent(ev.min, IC.dot, "Die Nachspielzeit beträgt " + ev.n + (ev.n === 1 ? " Minute." : " Minuten.")); break;
+      case "ht": addEvent("HZ", IC.wh, "Halbzeit. " + scoreLine() + "."); sfxWhistle(2); break;
+      case "restart": addEvent("46'", IC.wh, "Weiter geht's, die zweite Halbzeit läuft."); break;
+      case "et": addEvent("90'", IC.wh, "Verlängerung! Es steht " + (M.agg ? "insgesamt " + totals().fb + ":" + totals().op : scoreLine()) + ", jetzt geht es 2 × 15 Minuten weiter."); sfxWhistle(2); break;
+      case "et-ht": addEvent("105'", IC.wh, "Seitenwechsel in der Verlängerung. " + scoreLine() + "."); break;
+      case "goal":
+        if (fb) {
+          var tpl = ev.pen ? "Elfmeter verwandelt! <b>{s}</b> trifft sicher." : ev.counter ? pick(FB_COUNTER_GOAL) : ev.shot === "head" ? pick(FB_HEAD_GOAL) : M.derby && rnd() < 0.6 ? pick(FB_DERBY_GOAL) : pick(FB_GOAL);
+          addEvent(ev.min, IC.ball, fill(tpl, { s: esc(ev.p), t: t }) + (ev.a ? " Vorlage: " + esc(ev.a) + "." : "") + (ev.setp === "corner" ? " Nach einer Ecke." : ev.setp === "fk" ? " Direkt verwandelter Freistoß!" : "") + sc, "goal-fb big");
+          flash(); sfxGoal(true, ev.pn);
+        } else {
+          var tp = ev.pen ? "Elfmeter für <b>{t}</b>, {p} verwandelt." : ev.counter ? pick(OP_COUNTER_GOAL) : pick(OP_GOAL);
+          addEvent(ev.min, IC.ball, fill(tp, { t: t, p: esc(ev.p) }) + (ev.setp === "corner" ? " Nach einer Ecke." : ev.setp === "fk" ? " Freistoß direkt ins Tor." : "") + sc, "goal-op big");
+          flash(); sfxGoal(false);
         }
-      });
-    });
-  }
-  function finishConf() {
-    if (!M.conf) return;
-    M.conf.forEach(function (c) { c.ch = c.goals.filter(function (g) { return g.side === "h"; }).length; c.ca = c.goals.length - c.ch; });
-  }
-
-  // Ein starker Torwart verhindert Tore: Ederson (86) lässt ca. 7 % weniger zu als ein Durchschnittskeeper
-  function keeperFactor(defSide) {
-    if (defSide === "fb") {
-      var k = fbPlayers().filter(function (p) { return p.pos === "TW"; })[0];
-      return k ? Math.max(0.85, Math.min(1.15, 1 - ((k.r || 76) - 78) * 0.009)) : 1.25; // ohne Keeper: viel mehr Gegentore
-    }
-    return Math.max(0.9, Math.min(1.1, 1 - (M.cfg.opp.r - 74) * 0.005));
-  }
-  function penaltyKick(side) {
-    var t = M[side];
-    M.penCount++;
-    t.shots++; t.xg += 0.76;
-    var conv = side === "fb" ? 0.78 : 0.76 * keeperFactor("fb");
-    var scored = rnd() < conv;
-    if (scored) t.sot++;
-    if (side === "fb") {
-      var taker = fbPlayers().filter(function (p) { return p.pos !== "TW"; }).sort(function (a, b) { return (POS_WEIGHT[b.pos] || 0) * (b.r || 76) - (POS_WEIGHT[a.pos] || 0) * (a.r || 76); })[0];
-      if (!taker) return;
-      if (scored) {
-        t.g++; taker.rating += 0.8;
-        t.scorers.push(lastName(taker.n) + " " + minLabel() + " (E)");
-        t.log.push({ n: taker.n, a: null });
-        M.goalMins.push({ m: M.minute, h: M.half, side: "fb" });
-        M.momentum = Math.min(1, M.momentum + 0.4);
-        addEvent(minLabel(), IC.ball, "Elfmeter für Fenerbahçe! <b>" + esc(taker.n) + "</b> verwandelt sicher. <b>" + scoreLine() + "</b>", "goal-fb big");
-        flash(); sfxGoal(true, taker.n);
-      } else addEvent(minLabel(), IC.dot, "Elfmeter für Fenerbahçe – aber " + esc(lastName(taker.n)) + " scheitert!", "big");
-    } else {
-      if (scored) {
-        t.g++;
-        t.scorers.push("Elfmeter " + minLabel());
-        M.goalMins.push({ m: M.minute, h: M.half, side: "op" });
-        M.momentum = Math.max(-1, M.momentum - 0.4);
-        addEvent(minLabel(), IC.ball, "Elfmeter für " + esc(M.opp.n) + " – drin. <b>" + scoreLine() + "</b>", "goal-op big");
-        flash(); sfxGoal(false);
-      } else {
-        var k = fbPlayers().filter(function (p) { return p.pos === "TW"; })[0]; if (k) k.rating += 1;
-        addEvent(minLabel(), IC.dot, "Elfmeter für " + esc(M.opp.n) + " – " + esc(keeper()) + " hält!", "big");
-      }
+        break;
+      case "og":
+        if (fb) addEvent(ev.min, IC.ball, "Eigentor! Ein Spieler von " + t + " (" + esc(ev.ps || "") + ") lenkt den Ball ins eigene Netz." + sc, "goal-fb big");
+        else addEvent(ev.min, IC.ball, "Eigentor! " + esc(ev.p || "Ein Fener-Verteidiger") + " fälscht unglücklich ins eigene Tor ab." + sc, "goal-op big");
+        flash(); sfxGoal(fb); break;
+      case "save":
+        if (ev.shot === "big" || ev.xg > 0.25) {
+          sfxChance();
+          addEvent(ev.min, IC.dot, fb ? fill(pick(SAVE_FB), { s: esc(ev.ps) }) : fill(pick(SAVE_OP), { t: t, k: esc(ev.k || "der Keeper") }), "big");
+        } else if (rnd() < 0.35) addEvent(ev.min, IC.dot, fb ? esc(ev.ps) + " prüft den Torwart." : "Schuss von " + t + ", " + esc(ev.k || "der Keeper") + " hält.");
+        break;
+      case "post": sfxChance(); addEvent(ev.min, IC.dot, (fb ? "Pfosten! " + esc(ev.ps) + " hat Pech." : "Pfosten! " + t + " trifft nur das Aluminium."), "big"); break;
+      case "miss":
+        if (ev.shot === "big") addEvent(ev.min, IC.dot, fb ? "Riesenchance! " + esc(ev.ps) + " vergibt frei vor dem Tor." : "Glück für Fener: " + t + " vergibt eine Großchance.", "big");
+        else if (rnd() < (fb ? 0.3 : 0.2)) addEvent(ev.min, IC.dot, fb ? fill(pick(MISS_FB), { s: esc(ev.ps) }) : fill(pick(MISS_OP), { t: t }));
+        break;
+      case "pen-awarded": addEvent(ev.min, IC.dot, "Elfmeter für " + (fb ? "Fenerbahçe" : t) + "!" + (ev.f ? " Foul von " + esc(ev.f) + "." : ""), "big"); break;
+      case "pen-miss": addEvent(ev.min, IC.dot, ev.saved ? (fb ? esc(ev.ps) + " scheitert vom Punkt, " + esc(ev.k || "der Keeper") + " hält!" : esc(ev.k || "Der Keeper") + " hält den Elfmeter von " + t + "!") : (fb ? esc(ev.ps) + " schießt den Elfmeter am Tor vorbei!" : t + " verschießt den Elfmeter!"), "big"); break;
+      case "yellow": addEvent(ev.min, IC.y, "Gelbe Karte für " + (fb ? esc(ev.ps) : t + " (" + esc(ev.ps) + ")") + "."); break;
+      case "red": addEvent(ev.min, IC.r, (ev.second ? "Gelb-Rot" : "Rot") + " für " + (fb ? "<b>" + esc(ev.p) + "</b>. Fenerbahçe in Unterzahl." : "<b>" + t + "</b> (" + esc(ev.ps) + ")! Überzahl für Fenerbahçe."), "big"); break;
+      case "injury": addEvent(ev.min, IC.dot, (fb ? esc(ev.p) : t + ": " + esc(ev.ps)) + " bleibt verletzt liegen und kann nicht weitermachen.", fb ? "big" : ""); break;
+      case "short": addEvent(ev.min, IC.dot, "Alle Wechsel aufgebraucht, " + (fb ? "Fener" : t) + " nur noch zu zehnt."); break;
+      case "keeper-field": addEvent(ev.min, IC.dot, "Kein Torwart mehr: " + esc(ev.p) + " muss bei " + (fb ? "Fener" : t) + " ins Tor!", "big"); break;
+      case "sub":
+        var why = ev.reason === "attack" ? " Offensiver Wechsel." : ev.reason === "protect" ? " Der Vorsprung soll gehalten werden." : ev.reason === "injury" ? " Verletzungsbedingt." : ev.reason === "shape" ? " Die Abwehr wird wieder aufgefüllt." : "";
+        addEvent(ev.min, IC.sub, (fb ? "Wechsel: " + esc(ev.p) + " kommt für " + esc(ev.off) + "." : "Wechsel bei " + t + ": " + esc(ev.p) + " für " + esc(ev.off) + ".") + why);
+        break;
+      case "tactic": addEvent(ev.min, IC.dot, (fb ? "Taktik: Fenerbahçe " : t + " ") + TAC_TXT[ev.t] + "."); break;
+      case "derby": addEvent(ev.min, IC.dot, pick(DERBY_FLAVOR)); break;
+      case "shootout":
+        var fbK = ev.kicks.filter(function (k) { return k.side === "fb"; }).map(function (k) { return esc(k.p) + (k.ok ? " ✓" : " ✗"); });
+        var opK = ev.kicks.filter(function (k) { return k.side === "op"; }).map(function (k) { return k.ok ? "✓" : "✗"; });
+        addEvent("i.E.", IC.wh, "Elfmeterschießen. Fener: " + fbK.join(", ") + ". " + t + ": " + opK.join(" ") + ". <b>" + (M.fbHome ? ev.fb + ":" + ev.op : ev.op + ":" + ev.fb) + " i.E.</b>", ev.fb > ev.op ? "goal-fb big" : "goal-op big");
+        break;
+      case "ft":
+        addEvent(ev.min, IC.wh, "Abpfiff. Endstand " + scoreLine() + (M.et ? " nach Verlängerung" : "") + ".");
+        if (M.agg) addEvent("Ges.", IC.wh, "Gesamtergebnis nach Hin- und Rückspiel: Fenerbahçe " + totals().fb + ":" + totals().op + " " + t + ".");
+        sfxWhistle(3); stopAmbient();
+        break;
     }
   }
 
-  function shot(side, d) {
-    var t = M[side];
-    t.shots++;
-    var strength = side === "fb" ? d : -d;
-    var big = rnd() < 0.13 + strength * 0.03;
-    var xg = big ? 0.28 + rnd() * 0.4 : 0.02 + rnd() * rnd() * 0.18;
-    t.xg += xg;
-    var finish = (1 + strength * 0.12) * keeperFactor(side === "fb" ? "op" : "fb");
-    var goal = rnd() < xg * finish;
-    var onTarget = goal || rnd() < (big ? 0.55 : 0.22);
-    if (onTarget) t.sot++;
-
-    if (side === "fb") {
-      var shooter = weighted(fbPlayers(), function (p) { var w = POS_WEIGHT[p.pos]; return (w === undefined ? 0.5 : w) * Math.pow((p.r || 76) / 80, 3); });
-      if (goal && rnd() < 0.03) {
-        t.g++; M.ogCount++;
-        M.goalMins.push({ m: M.minute, h: M.half, side: "fb" });
-        t.scorers.push("Eigentor " + minLabel());
-        M.momentum = Math.min(1, M.momentum + 0.4);
-        addEvent(minLabel(), IC.ball, "Eigentor! Ein Verteidiger von " + esc(M.opp.n) + " lenkt den Ball ins eigene Netz. <b>" + scoreLine() + "</b>", "goal-fb big");
-        flash(); sfxGoal(true);
-      } else if (goal) {
-        t.g++;
-        M.goalMins.push({ m: M.minute, h: M.half, side: "fb" });
-        var mates = fbPlayers().filter(function (p) { return p !== shooter && p.pos !== "TW"; });
-        var assist = rnd() < 0.75 && mates.length ? weighted(mates, function (p) { return ASSIST_WEIGHT[p.pos] || 0.5; }) : null;
-        shooter.rating += 1.1; if (assist) assist.rating += 0.6;
-        t.scorers.push(lastName(shooter.n) + " " + minLabel());
-        t.log.push({ n: shooter.n, a: assist ? assist.n : null });
-        M.momentum = Math.min(1, M.momentum + 0.4);
-        var tpl = M.derby && rnd() < 0.7 ? pick(FB_DERBY_GOAL) : pick(FB_GOAL);
-        addEvent(minLabel(), IC.ball, fill(tpl, { s: esc(shooter.n), t: esc(M.opp.n) }) + (assist ? " Vorlage: " + esc(lastName(assist.n)) + "." : "") + " <b>" + scoreLine() + "</b>", "goal-fb big");
-        flash(); sfxGoal(true, shooter.n);
-      } else if (big) {
-        shooter.rating += 0.1; sfxChance();
-        addEvent(minLabel(), IC.dot, fill(pick(SAVE_FB), { s: esc(lastName(shooter.n)) }), "big");
-      } else if (rnd() < 0.35) {
-        addEvent(minLabel(), IC.dot, fill(pick(MISS_FB), { s: esc(lastName(shooter.n)) }));
-      }
-    } else {
-      var no = pick([7, 9, 10, 11, 8, 19, 17, 20, 23]);
-      if (goal && rnd() < 0.03) {
-        t.g++; M.ogCount++;
-        M.goalMins.push({ m: M.minute, h: M.half, side: "op" });
-        var og = pick(fbPlayers().filter(function (p) { return /IV|RV|LV|ZDM/.test(p.pos); }).concat(fbPlayers()).slice(0, 6));
-        if (og) og.rating -= 0.6;
-        t.scorers.push("Eigentor " + minLabel());
-        M.momentum = Math.max(-1, M.momentum - 0.4);
-        addEvent(minLabel(), IC.ball, "Eigentor! " + esc(og ? og.n : "Ein Fener-Verteidiger") + " fälscht unglücklich ins eigene Tor ab. <b>" + scoreLine() + "</b>", "goal-op big");
-        flash(); sfxGoal(false);
-      } else if (goal) {
-        t.g++;
-        M.goalMins.push({ m: M.minute, h: M.half, side: "op" });
-        t.scorers.push("#" + no + " " + minLabel());
-        M.momentum = Math.max(-1, M.momentum - 0.4);
-        fbPlayers().forEach(function (p) { if (/TW|IV|RV|LV/.test(p.pos)) p.rating -= 0.3; });
-        addEvent(minLabel(), IC.ball, fill(pick(OP_GOAL), { t: esc(M.opp.n), no: no }) + " <b>" + scoreLine() + "</b>", "goal-op big");
-        flash(); sfxGoal(false);
-      } else if (big && onTarget) {
-        var k = fbPlayers().filter(function (p) { return p.pos === "TW"; })[0]; if (k) k.rating += 0.4;
-        sfxChance();
-        addEvent(minLabel(), IC.dot, fill(pick(SAVE_OP), { t: esc(M.opp.n), k: esc(keeper()) }), "big");
-      } else if (rnd() < 0.25) {
-        addEvent(minLabel(), IC.dot, fill(pick(MISS_OP), { t: esc(M.opp.n), d: esc(defender()) }));
-      }
-    }
-  }
-
-  function foul(side) {
-    M[side].fouls++;
-    if (rnd() < 0.175 * (M.derby ? 1.25 : 1) * (M.minute > 75 ? 1.2 : 1)) card(side);
-  }
-  function card(side) {
-    var t = M[side];
-    if (side === "fb") {
-      var cands = fbPlayers().filter(function (p) { return p.pos !== "TW"; });
-      if (!cands.length) return;
-      var p = weighted(cands, function (p) { return (/ZDM|IV|RV|LV/.test(p.pos) ? 2 : 1) * (p.booked ? 0.45 : 1); }); // Verwarnte spielen vorsichtiger
-      if (p.booked || rnd() < 0.018) {
-        var second = p.booked;
-        p.off = true; t.red++; p.rating -= 1.5;
-        M.cardLog.push({ n: p.n, t: second ? "yr" : "r" });
-        addEvent(minLabel(), IC.r, (second ? "Gelb-Rot" : "Rot") + " für <b>" + esc(p.n) + "</b>. Fenerbahçe nur noch zu zehnt.", "big");
-      } else {
-        p.booked = true; t.y++; p.rating -= 0.2;
-        M.cardLog.push({ n: p.n, t: "y" });
-        addEvent(minLabel(), IC.y, "Gelbe Karte für " + esc(lastName(p.n)) + ".");
-      }
-    } else {
-      var no = pick([4, 5, 6, 8, 14, 22, 25, 3, 18]);
-      if (rnd() < 0.018 || rnd() < t.y * 0.022) { t.red++; addEvent(minLabel(), IC.r, (rnd() < 0.5 ? "Gelb-Rot" : "Rot") + " für <b>" + esc(M.opp.n) + "</b> (#" + no + ")! Überzahl für Fenerbahçe.", "big"); }
-      else { t.y++; addEvent(minLabel(), IC.y, "Gelbe Karte für " + esc(M.opp.n) + " (#" + no + ")."); }
-    }
-  }
-
-  function injury() {
-    var cands = fbPlayers().filter(function (p) { return p.pos !== "TW"; });
-    if (!cands.length) return;
-    var p = pick(cands);
-    M.injLog.push(p.n);
-    addEvent(minLabel(), IC.dot, esc(p.n) + " bleibt verletzt liegen und kann nicht weitermachen.", "big");
-    if (M.subs < 5) sub(p);
-    else { p.off = true; addEvent(minLabel(), IC.dot, "Alle Wechsel aufgebraucht – Fener nur noch zu zehnt."); }
-  }
-
-  function sub(forcedOff) {
-    var avail = M.bench.filter(function (p) { return !p.used && p.pos !== "TW"; });
-    if (!avail.length) { if (forcedOff) forcedOff.off = true; return; }
-    var losing = M.fb.g < M.op.g, winning = M.fb.g > M.op.g;
-    var on;
-    if (forcedOff) {
-      var same = avail.filter(function (p) { return p.pos === forcedOff.pos; });
-      on = same.length ? pick(same) : pick(avail);
-    } else {
-      on = weighted(avail, function (p) {
-        if (losing) return /ST|LA|RA|ZOM/.test(p.pos) ? 3 : 0.5;
-        if (winning) return /IV|ZM|RV|ZDM/.test(p.pos) ? 3 : 1;
-        return 1;
-      });
-    }
-    var off = forcedOff;
-    if (!off) {
-      var outs = fbPlayers().filter(function (p) { return p.pos !== "TW" && !p.subbed; });
-      if (!outs.length) return;
-      off = weighted(outs, function (p) { return (p.booked ? 2 : 1) * Math.max(0.2, 8 - p.rating); });
-    }
-    doSub(off, on, off.pos, false);
-  }
-  function doSub(off, on, pos, manual) {
-    off.off = true; off.subbed = true;
-    on.used = true;
-    M.onPitch.push({ no: on.no, pos: pos, n: on.n, r: on.r, rating: 6.5, booked: false, off: false, subbed: true });
-    M.subs++;
-    addEvent(minLabel(), IC.sub, (manual ? "Trainer-Entscheidung: " : "Wechsel: ") + esc(lastName(on.n)) + " kommt für " + esc(lastName(off.n)) + ".");
-  }
-
-  function scoreLine() {
-    var h = M.fbHome ? M.fb.g : M.op.g, a = M.fbHome ? M.op.g : M.fb.g;
-    return h + ":" + a;
-  }
-
-  function endMatch() {
-    M.done = true;
-    clearInterval(timer); timer = null;
-    M.minute = 90 + M.added2;
-    addEvent("90+" + M.added2 + "'", IC.wh, "Abpfiff. Endstand " + scoreLine() + ".");
-    sfxWhistle(3); stopAmbient();
-    if (M.agg) {
-      var fbT = M.fb.g + M.agg[0], opT = M.op.g + M.agg[1];
-      addEvent("Ges.", IC.wh, "Gesamtergebnis nach Hin- und Rückspiel: Fenerbahçe " + fbT + ":" + opT + " " + esc(M.opp.n) + ".");
-      if (M.ko && fbT === opT) penalties();
-    } else if (M.ko && M.fb.g === M.op.g) penalties();
-    finishConf();
-    finish();
-  }
-
-  function penaltyShootout(fbE, opE, takers) {
-    var fbP = 0, opP = 0, round = 0, log = [];
-    var fbConv = 0.76 + (fbE - opE) * 0.003, opConv = 0.76 - (fbE - opE) * 0.003;
-    takers = takers || [];
-    while (true) {
-      round++;
-      var a = rnd() < fbConv, b = rnd() < opConv;
-      if (a) fbP++; if (b) opP++;
-      if (takers.length) log.push(esc(lastName(takers[(round - 1) % takers.length].n)) + (a ? " ✓" : " ✗"));
-      if (round <= 5) { var left = 5 - round; if (fbP > opP + left || opP > fbP + left) break; }
-      else if (fbP !== opP) break;
-      if (round > 20) { fbP++; break; }
-    }
-    return { fb: fbP, op: opP, log: log };
-  }
-
-  function penalties() {
-    var takers = fbPlayers().filter(function (p) { return p.pos !== "TW"; }).sort(function (a, b) { return (POS_WEIGHT[b.pos] || 0) - (POS_WEIGHT[a.pos] || 0); });
-    var r = penaltyShootout(eff("fb"), eff("op"), takers);
-    M.pens = { fb: r.fb, op: r.op };
-    addEvent("i.E.", IC.wh, "Elfmeterschießen: " + r.log.join(", ") + ". <b>" + (M.fbHome ? r.fb + ":" + r.op : r.op + ":" + r.fb) + " i.E.</b>", r.fb > r.op ? "goal-fb big" : "goal-op big");
-  }
-
-  function finish() {
-    var res = M.fb.g > M.op.g ? "w" : M.fb.g < M.op.g ? "l" : "d";
-    var best = M.onPitch.slice().sort(function (a, b) { return b.rating - a.rating; })[0];
-    var out = { fg: M.fb.g, og: M.op.g, pens: M.pens, scorers: M.fb.scorers.slice(), goals: M.fb.log.slice(), motm: best.n, cards: M.cardLog.slice(), injuries: M.injLog.slice(),
-      goalMins: M.goalMins.slice(), penCount: M.penCount, ogCount: M.ogCount,
-      ratings: M.onPitch.map(function (p) { return { n: p.n, r: p.rating }; }),
-      st: { fb: { shots: M.fb.shots, sot: M.fb.sot, xg: M.fb.xg, corners: M.fb.corners, fouls: M.fb.fouls, y: M.fb.y, red: M.fb.red, poss: M.fb.poss }, op: { shots: M.op.shots, sot: M.op.sot, xg: M.op.xg, corners: M.op.corners, fouls: M.op.fouls, y: M.op.y, red: M.op.red, poss: M.op.poss } } };
-    M.out = out;
+  // Nach dem Abpfiff: Verlauf, Saison und Ergebnisanzeige
+  function matchDone() {
+    var out = M.out;
+    if (M.live) { clearInterval(timer); timer = null; }
     if (M.cfg.dry) return;
-
-    var tieRes = M.pens ? (M.pens.fb > M.pens.op ? "w" : "l") : res;
+    var res = out.res, tieRes = M.pens ? (M.pens.fb > M.pens.op ? "w" : "l") : res;
     var title = M.fbHome ? "Fenerbahçe – " + M.opp.n : M.opp.n + " – Fenerbahçe";
     pushHistory({
       res: res, title: title,
       sub: M.comp + (M.season ? " · " + fmtDate(M.season.fx.d) : "") + (M.fb.scorers.length ? " · " + M.fb.scorers.map(function (s) { return s.replace(/ \d.*$/, ""); }).join(", ") : ""),
-      score: scoreLine() + (M.pens ? " i.E." : "")
+      score: scoreLine() + (M.pens ? " i.E." : M.et ? " n.V." : "")
     });
     if (M.season) applyFixtureResult(M.season.fx.id, out, M.cfg.round);
-
     if (!M.live) return;
     render();
     var v = $("verdict");
@@ -1876,20 +2675,21 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
     var txt = { w: "Sieg für Fenerbahçe", d: "Unentschieden", l: "Niederlage" }[res];
     if (M.pens) txt = tieRes === "w" ? "Weiter im Elfmeterschießen" : "Raus im Elfmeterschießen";
     else if (M.agg) {
-      var fbT = M.fb.g + M.agg[0], opT = M.op.g + M.agg[1];
-      txt = fbT > opT ? "Weiter! " + fbT + ":" + opT + " gesamt" : "Ausgeschieden, " + fbT + ":" + opT + " gesamt";
-      v.className = "verdict " + (fbT > opT ? "w" : "l");
+      var tt = totals();
+      txt = tt.fb > tt.op ? "Weiter! " + tt.fb + ":" + tt.op + " gesamt" : "Ausgeschieden, " + tt.fb + ":" + tt.op + " gesamt";
+      v.className = "verdict " + (tt.fb > tt.op ? "w" : "l");
     } else if (res === "w" && M.fb.g - M.op.g >= 3) txt = "Kantersieg!";
     else if (res === "w" && M.derby) txt = "Derbysieg!";
+    if (M.et && !M.pens && !M.agg) txt += " nach Verlängerung";
     v.textContent = txt;
+    var best = M.fb.players.filter(function (p) { return p.n === out.motm; })[0];
     $("scorers").textContent = M.fb.scorers.length ? "Tore: " + M.fb.scorers.join(", ") : "Kein Tor für Fenerbahçe";
-    $("motm").textContent = "Spieler des Spiels: " + best.n + " (" + Math.min(10, best.rating).toFixed(1) + ")";
+    $("motm").textContent = "Spieler des Spiels: " + out.motm + (best ? " (" + best.rating.toFixed(1) + ")" : "");
     $("result").hidden = false;
     $("live-controls").hidden = true;
     $("res-quick").hidden = !!M.season;
     $("res-season").hidden = !M.season;
   }
-
   function flash() {
     if (!M.live) return;
     ["g-home", "g-away"].forEach(function (id) { var e = $(id); e.classList.remove("flash"); void e.offsetWidth; e.classList.add("flash"); });
@@ -1900,8 +2700,8 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
     var home = M.fbHome ? M.fb : M.op, away = M.fbHome ? M.op : M.fb;
     $("g-home").textContent = home.g; $("g-away").textContent = away.g;
     $("minute").textContent = M.done ? "Ende" : minLabel();
-    var total = 90 + M.added1 + M.added2;
-    var elapsed = M.half === 1 ? M.minute : 45 + M.added1 + (M.minute - 45);
+    var total = 90 + M.added1 + M.added2 + (M.et ? 30 + M.added3 + M.added4 : 0);
+    var elapsed = M.half === 1 ? M.minute : M.half === 2 ? 45 + M.added1 + (M.minute - 45) : M.half === 3 ? 90 + M.added1 + M.added2 + (M.minute - 90) : 105 + M.added1 + M.added2 + M.added3 + (M.minute - 105);
     $("bar").style.width = Math.min(100, (elapsed / total) * 100) + "%";
     if (M.pens) {
       $("pens").hidden = false;
@@ -2007,20 +2807,16 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
     run();
   }
 
-  function simulateSilently(cfg) {
-    cfg.live = false;
-    var prev = M;
-    M = newMatch(cfg);
-    while (!M.done) step();
-    var out = M.out;
-    M = prev;
-    return out;
+  // Live-Lauf: eine Minute pro Takt
+  function liveTick() {
+    if (!M || M.done) { clearInterval(timer); timer = null; return; }
+    step();
+    if (M.live) render();
   }
-
   function run() {
     clearInterval(timer);
-    if (M.speed === 0) { while (!M.done) step(); return; }
-    timer = setInterval(step, M.speed);
+    if (M.speed === 0) { while (!M.done) step(); render(); return; }
+    timer = setInterval(liveTick, M.speed);
   }
 
   function quickCfg() {
@@ -2029,6 +2825,7 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
     return {
       opp: { n: opp.n, r: teamRating(opp.n), st: opp.st, rival: opp.rival }, venue: prefs.venue,
       fbRating: prefs.form === null ? teamStrength() : prefs.form, ko: prefs.ko,
+      fbAdj: prefs.form === null ? 0 : prefs.form - teamStrength(), euro: isEurope,
       comp: prefs.ko ? (isEurope ? "Europapokal · K.-o." : "Pokal · K.-o.") : (isEurope ? "Testspiel · Europa" : "Testspiel")
     };
   }
@@ -2109,8 +2906,11 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
     var avg = teams.reduce(function (sum, n) { return sum + baseRating(n); }, 0) / teams.length;
     rows.forEach(function (t) {
       if (!t.p || t.gd === undefined || t.gd === null) return;
-      var dObs = Math.log(t.gd / t.p / 2.7 + Math.sqrt(Math.pow(t.gd / t.p / 2.7, 2) + 1)); // asinh
-      var rObs = avg + 22.5 * dObs, r = baseRating(t.n), w = t.p / (t.p + 10);
+      // E[Tordifferenz je Spiel] = 2·μ·sinh(g) -> g, dann g = SAT·tanh(d/(SLOPE·SAT)) umkehren
+      var x = t.gd / t.p / (2 * XG.MU), g = Math.log(x + Math.sqrt(x * x + 1));
+      g = Math.max(-0.95 * XG.SAT, Math.min(0.95 * XG.SAT, g));
+      var dObs = XG.SLOPE * XG.SAT * 0.5 * Math.log((1 + g / XG.SAT) / (1 - g / XG.SAT));
+      var rObs = avg + dObs, r = baseRating(t.n), w = t.p / (t.p + 10);
       form[t.n] = Math.round(Math.max(-6, Math.min(6, w * (rObs - r))) * 10) / 10;
     });
     return form;
@@ -2267,7 +3067,8 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
     return {
       opp: oppCfg(fx), xi: lu.xi, bench: lu.bench,
       venue: fx.v === "H" ? "home" : fx.v === "A" ? "away" : "neutral",
-      fbRating: Math.round((teamStrength(lu.xi) + (FORM[FB_NAME] || 0) - tiredness(fx)) * 10) / 10, comp: comp, ko: !!fx.ko, agg: agg,
+      comp: comp, ko: !!fx.ko, agg: agg,
+      fbAdj: fbAdjFor(fx), euro: fx.comp === "CL", fresh: freshMap(fx),
       season: { fx: fx },
       round: fx.comp === "SL" && !noRound ? genLeagueRound(fx.opp) : null
     };
@@ -2297,7 +3098,7 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
   // Gute Noten machen einen Spieler für die nächsten Spiele stärker, schwache schwächer (−4 bis +4).
   // Wer nicht spielt, nähert sich langsam wieder seinem Normalwert an.
   function pform(n) { return S && S.pform && S.pform[n] ? S.pform[n] : 0; }
-  function withForm(p) { var f = pform(p.n); return f ? { no: p.no, pos: p.pos, n: p.n, r: Math.round(((p.r || 76) + f) * 10) / 10, base: p.r, f: f } : p; }
+  function withForm(p) { var f = pform(p.n); return f ? { no: p.no, pos: p.pos, nat: p.pos, n: p.n, r: Math.round(((p.r || 76) + f) * 10) / 10, base: p.r, f: f } : { no: p.no, pos: p.pos, nat: p.pos, n: p.n, r: p.r }; }
   function applyPlayerForm(res) {
     if (!res.ratings || !res.ratings.length) return;
     if (!S.pform) S.pform = {};
@@ -2305,9 +3106,10 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
     res.ratings.forEach(function (x) { played[x.n] = Math.max(played[x.n] || 0, x.r); });
     squad.xi.concat(squad.bench).forEach(function (p) {
       var f = S.pform[p.n] || 0;
-      if (played[p.n] !== undefined) f = 0.7 * f + (played[p.n] - 6.6 + team) * 1.3;
-      else f = f * 0.8;
-      f = Math.max(-4, Math.min(4, Math.round(f * 10) / 10));
+      // gedämpft: eine starke Note hebt die Form um höchstens ~1 Punkt, Obergrenze ±2,5
+      if (played[p.n] !== undefined) f = 0.75 * f + Math.max(-1.2, Math.min(1.2, (played[p.n] - 6.7 + team) * 0.9));
+      else f = f * 0.85;
+      f = Math.max(-2.5, Math.min(2.5, Math.round(f * 10) / 10));
       if (Math.abs(f) < 0.2) delete S.pform[p.n]; else S.pform[p.n] = f;
     });
   }
@@ -2316,7 +3118,7 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
   // Aufstellung für ein Saisonspiel: Ausfälle werden positionsgerecht von der Bank ersetzt, Spielerform zählt mit
   function lineupFor(fx) {
     var comp = fx.comp, missing = [];
-    var bench = squad.bench.filter(function (p) { return !outReason(p.n, comp); }).map(withForm);
+    var bench = squad.bench.filter(function (p) { return !outReason(p.n, comp); }).map(withForm).map(function (p) { p.nat = p.nat || p.pos; return p; });
     var xi = squad.xi.map(function (p) {
       var why = outReason(p.n, comp);
       if (!why) return withForm(p);
@@ -2328,18 +3130,73 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
       missing.push({ n: p.n, why: why, by: rep ? rep.n : null });
       if (!rep) return null;
       bench.splice(bench.indexOf(rep), 1);
-      return { no: rep.no, pos: p.pos, n: rep.n, r: rep.r };
+      return { no: rep.no, pos: p.pos, nat: rep.nat || rep.pos, n: rep.n, r: rep.r, base: rep.base, f: rep.f };
     }).filter(Boolean);
+    // Rotation in englischen Wochen: wer müde ist, wird geschont, wenn ein frischer Ersatz da ist
+    // (nicht in Derbys und nicht in K.-o.-Spielen)
+    var tm = findTeam(fx.opp);
+    if (S && !fx.ko && !(tm && tm.rival)) {
+      xi = xi.map(function (p) {
+        if (p.pos === "TW") return p;
+        var fr = freshFor(p.n, fx.d); if (fr >= 84) return p;
+        var c = bench.filter(function (b) { return (b.nat || b.pos) !== "TW" && posFit(b.nat || b.pos, p.pos) >= 0.9 && freshFor(b.n, fx.d) >= 92 && (b.r || 0) >= (p.r || 0) - 6; })
+          .sort(function (a, b) { return (b.r || 0) * posFit(b.nat || b.pos, p.pos) - (a.r || 0) * posFit(a.nat || a.pos, p.pos); })[0];
+        if (!c) return p;
+        bench.splice(bench.indexOf(c), 1); bench.push(p);
+        missing.push({ n: p.n, why: "geschont, Kraft " + Math.round(fr) + " %", by: c.n, rot: true });
+        return { no: c.no, pos: p.pos, nat: c.nat || c.pos, n: c.n, r: c.r, base: c.base, f: c.f };
+      });
+    }
     return { xi: xi, bench: bench, missing: missing };
   }
-  // Englische Woche: Lag das letzte Spiel höchstens 3 Tage zurück, ist das Team etwas müde (−1)
-  function tiredness(fx) {
-    var t = Date.parse(fx.d + "T12:00:00");
-    var prev = S.fixtures.filter(function (f) { return f.done && f.id !== fx.id && f.d < fx.d; }).map(function (f) { return Date.parse(f.d + "T12:00:00"); });
-    var last = prev.length ? Math.max.apply(null, prev) : 0;
-    return last && t - last <= 3 * 86400000 ? 1 : 0;
+  // ---------- Frische (0–100 %) ----------
+  // Nach einem Spiel: −0,3 % je gespielter Minute (90' = −27 %). Erholung: +6 % pro Tag.
+  // So ist ein Spieler nach einer Woche wieder bei 100 %, nach 3 Tagen bei ~91 %; in englischen
+  // Wochen sammelt sich Müdigkeit an. Startkraft und Verletzungsrisiko hängen davon ab.
+  function freshFor(name, date) {
+    if (!S || !S.fit || S.fit[name] === undefined || !S.fitDate) return 100;
+    var days = Math.max(0, (Date.parse(date + "T12:00:00") - Date.parse(S.fitDate + "T12:00:00")) / 86400000);
+    return Math.min(100, S.fit[name] + 6 * days);
   }
-  function fbSeasonStrength(fx) { return Math.round((teamStrength(lineupFor(fx).xi) + (FORM[FB_NAME] || 0) - tiredness(fx)) * 10) / 10; }
+  function freshMap(fx) { var m = {}; squad.xi.concat(squad.bench).forEach(function (p) { m[p.n] = freshFor(p.n, fx.d); }); return m; }
+  function updateFitness(fx, minutes) {
+    if (!S.fit) S.fit = {};
+    var nf = {};
+    squad.xi.concat(squad.bench).forEach(function (p) { nf[p.n] = Math.max(40, freshFor(p.n, fx.d) - 0.3 * (minutes[p.n] || 0)); });
+    S.fit = nf; S.fitDate = fx.d;
+  }
+  // ---------- Moral (−1 bis +1) ----------
+  // Steigt, wenn Fener mehr Punkte holt als erwartet, fällt sonst; Derbys zählen extra. ±1,5 Stärkepunkte.
+  function moraleAdj() { return S && S.morale ? 1.5 * S.morale : 0; }
+  function moraleText() { var m = S && S.morale || 0; return m >= 0.45 ? "sehr gut" : m >= 0.15 ? "gut" : m > -0.15 ? "normal" : m > -0.45 ? "angeschlagen" : "im Keller"; }
+  function updateMorale(fx, res, lam) {
+    var m = dcMatrix(lam[0], lam[1]), pw = 0, pd = 0, i, j;
+    for (i = 0; i < m.length; i++) for (j = 0; j < m.length; j++) { if (i > j) pw += m[i][j]; else if (i === j) pd += m[i][j]; }
+    var pts = res.fg > res.og ? 3 : res.fg === res.og ? 1 : 0, exp = 3 * pw + pd;
+    var t = findTeam(fx.opp), der = t && t.rival ? (pts === 3 ? 0.15 : pts === 0 ? -0.15 : 0) : 0;
+    S.morale = Math.max(-1, Math.min(1, 0.8 * (S.morale || 0) + 0.3 * (pts - exp) / 1.5 + der));
+  }
+  function fbAdjFor(fx) { return (FORM[FB_NAME] || 0) + moraleAdj(); }
+  // Alles, was das Erwartungsmodell für ein Saisonspiel braucht
+  var UNIT_MEMO = {}, UNIT_MEMO_N = 0;
+  function memoUnits(xi, fr) {
+    var key = xi.map(function (p) { return p.n + "/" + p.pos + "/" + (p.f || 0) + "/" + Math.round(fr[p.n] === undefined ? 100 : fr[p.n]); }).join("|");
+    var u = UNIT_MEMO[key];
+    if (!u) { if (UNIT_MEMO_N++ > 4000) { UNIT_MEMO = {}; UNIT_MEMO_N = 0; } u = UNIT_MEMO[key] = teamUnits(xi, fr); }
+    return u;
+  }
+  function fixtureCtx(fx) {
+    var lu = lineupFor(fx), fr = freshMap(fx);
+    var u = memoUnits(lu.xi, fr), euro = fx.comp === "CL", adj = fbAdjFor(fx) + (euro ? XG.EURO_TR : 0);
+    var st = styleOf(fx.opp), t = findTeam(fx.opp);
+    var oppR = fx.r + (euro && LEAGUE.some(function (x) { return x.n === fx.opp; }) ? XG.EURO_TR : 0);
+    return { lu: lu, fresh: fr, ctx: {
+      uFb: { att: u.att + adj, ctl: u.ctl + adj, def: u.def + adj, gk: u.gk + adj * 0.5 }, uOp: oppUnits(oppR, st),
+      venue: fx.v === "H" ? "home" : fx.v === "A" ? "away" : "neutral", oppName: fx.opp, derby: !!(t && t.rival),
+      tFb: tactic(), tOp: TACTICS.bal, sFb: fbStyleFor(lu.xi, prefs.tactic || "bal"), sOp: st } };
+  }
+  function fixtureLambdas(fx) { var e = expectedGoals(fixtureCtx(fx).ctx); return stateAdjust(e.lf, e.lo); }
+  function fbSeasonStrength(fx) { return Math.round(overallOf(fixtureCtx(fx).ctx.uFb) * 10) / 10; }
   // Nach jedem Fener-Spiel: Sperren/Verletzungen herunterzählen, neue Karten und Verletzungen eintragen
   function applyAvail(fx, res) {
     if (!S.avail) S.avail = {};
@@ -2426,18 +3283,34 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
     t.pts += gf > ga ? 3 : gf === ga ? 1 : 0;
   }
 
-  // Andere Süper-Lig-Spiele eines Spieltags (mit Torminuten für die Konferenz)
+  // Torminute nach dem Zeitprofil der Engine (mehr Tore in der zweiten Halbzeit)
+  function goalMinute() {
+    var x = rnd() * TIME_SUM, m;
+    for (m = 1; m <= 90; m++) { x -= timeW(m <= 45 ? 1 : 2, m); if (x <= 0) return m; }
+    return 90;
+  }
+  // Andere Süper-Lig-Spiele eines Spieltags (mit Torminuten für die Konferenz). Paarungen, die es
+  // schon oft gab, werden vermieden, damit jeder etwa gleich oft gegen jeden spielt.
   function genLeagueRound(fbOpp) {
     var teams = LEAGUE.filter(function (t) { return t.n !== fbOpp && S.bg[t.n] > 0; }).map(function (t) { return t.n; });
+    if (!S.met) S.met = {};
+    function met(a, b) { return S.met[a < b ? a + "|" + b : b + "|" + a] || 0; }
     shuffle(teams);
     teams.sort(function (a, b) { return S.bg[b] - S.bg[a]; });
+    var pairs = [];
+    while (teams.length > 1) {
+      var h0 = teams.shift(), best = 0;
+      for (var k = 1; k < teams.length; k++) if (met(h0, teams[k]) < met(h0, teams[best])) best = k;
+      pairs.push([h0, teams.splice(best, 1)[0]]);
+    }
     var out = [];
-    for (var i = 0; i + 1 < teams.length; i += 2) {
-      var h = teams[i], a = teams[i + 1];
+    for (var i = 0; i < pairs.length; i++) {
+      var h = pairs[i][0], a = pairs[i][1];
+      var key = h < a ? h + "|" + a : a + "|" + h; S.met[key] = (S.met[key] || 0) + 1;
       if (rnd() < 0.5) { var x = h; h = a; a = x; }
-      var sc = quickScore(teamRating(h), teamRating(a), HOME_ADV[h] || 3), goals = [];
-      for (var g = 0; g < sc[0]; g++) goals.push({ min: 1 + Math.floor(rnd() * 90), side: "h" });
-      for (g = 0; g < sc[1]; g++) goals.push({ min: 1 + Math.floor(rnd() * 90), side: "a" });
+      var sc = quickScore(teamRating(h), teamRating(a), STADIUM_HOME[h] || XG.HOME), goals = [];
+      for (var g = 0; g < sc[0]; g++) goals.push({ min: goalMinute(), side: "h" });
+      for (g = 0; g < sc[1]; g++) goals.push({ min: goalMinute(), side: "a" });
       goals.sort(function (p, q) { return p.min - q.min; });
       out.push({ h: h, a: a, goals: goals });
     }
@@ -2451,15 +3324,27 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
       S.bg[m.h]--; S.bg[m.a]--;
     });
   }
+  // Restliche Hintergrundspiele am Saisonende: immer echte Paarungen, beide Seiten werden eingetragen
   function flushLeague() {
-    LEAGUE.forEach(function (t) {
-      while (S.bg[t.n] > 0) {
-        var home = rnd() < 0.5;
-        var sc = quickScore(t.r, 71, home ? 3 : -3);
-        addResult(t.n, sc[0], sc[1]);
-        S.bg[t.n]--;
+    var guard = 0;
+    while (guard++ < 400) {
+      var left = LEAGUE.filter(function (t) { return S.bg[t.n] > 0; }).map(function (t) { return t.n; });
+      if (!left.length) break;
+      if (left.length === 1) {
+        // ungerade Restzahl (z. B. ein Nachholspiel): gegen einen zufälligen Gegner, beide Seiten zählen
+        var a0 = left[0], others = LEAGUE.filter(function (t) { return t.n !== a0; }), o = others[Math.floor(rnd() * others.length)].n;
+        var hm = rnd() < 0.5, sc1 = hm ? quickScore(teamRating(a0), teamRating(o), STADIUM_HOME[a0] || XG.HOME) : quickScore(teamRating(o), teamRating(a0), STADIUM_HOME[o] || XG.HOME);
+        if (hm) { addResult(a0, sc1[0], sc1[1]); addResult(o, sc1[1], sc1[0]); } else { addResult(o, sc1[0], sc1[1]); addResult(a0, sc1[1], sc1[0]); }
+        S.bg[a0]--;
+        continue;
       }
-    });
+      shuffle(left);
+      for (var i = 0; i + 1 < left.length; i += 2) {
+        var h = left[i], a = left[i + 1], sc = quickScore(teamRating(h), teamRating(a), STADIUM_HOME[h] || XG.HOME);
+        addResult(h, sc[0], sc[1]); addResult(a, sc[1], sc[0]);
+        S.bg[h]--; S.bg[a]--;
+      }
+    }
   }
 
   function addStats(res) {
@@ -2473,7 +3358,13 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
   function applyFixtureResult(id, res, round) {
     var fx = getFixture(id);
     if (!fx || fx.done) return;
-    fx.done = true; fx.fg = res.fg; fx.og = res.og; fx.pens = res.pens || null; fx.scorers = res.scorers || [];
+    // Vor dem Eintragen: Erwartung (für die Moral) und Einsatzminuten (für die Frische)
+    var lam = res.lambda && res.lambda.fb ? [res.lambda.fb, res.lambda.op] : res.lam || fixtureLambdas(fx);
+    var minutes = res.minutes;
+    if (!minutes) { minutes = {}; lineupFor(fx).xi.forEach(function (p) { minutes[p.n] = 90; }); }
+    fx.done = true; fx.fg = res.fg; fx.og = res.og; fx.pens = res.pens || null; fx.et = !!res.et; fx.scorers = res.scorers || [];
+    updateFitness(fx, minutes);
+    updateMorale(fx, res, lam);
     if (!S._dry) addStats(res);
     applyAvail(fx, res);
     if (!S._dry) applyPlayerForm(res);
@@ -2524,18 +3415,23 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
   }
 
   function finishClLeague() {
-    var me = clRecord();
-    var field = CL_FIELD.map(function (r) {
-      var pts = 0, gd = 0;
+    var me = clRecord(), fbEu = FB_RATING + (FORM[FB_NAME] || 0) + XG.EURO_TR;
+    var field = CL_FIELD.map(function (r, idx) {
+      var pts = 0, gd = 0, gf = 0;
       for (var i = 0; i < 8; i++) {
-        var o = pick(CL_FIELD.concat([FB_RATING]));
-        var sc = quickScore(r, o, i % 2 ? 3 : -3);
-        pts += sc[0] > sc[1] ? 3 : sc[0] === sc[1] ? 1 : 0; gd += sc[0] - sc[1];
+        // Gegner aus dem Feld (nicht sich selbst), Fener ist mit seiner Europapokal-Stärke dabei
+        var pool = CL_FIELD.filter(function (x, k) { return k !== idx; }).concat([fbEu]);
+        var o = pool[Math.floor(rnd() * pool.length)];
+        var sc = i % 2 ? quickScore(r, o, XG.HOME) : quickScore(o, r, XG.HOME), mine = i % 2 ? sc[0] : sc[1], theirs = i % 2 ? sc[1] : sc[0];
+        pts += mine > theirs ? 3 : mine === theirs ? 1 : 0; gd += mine - theirs; gf += mine;
       }
-      return { pts: pts, gd: gd + rnd() * 0.1 };
+      return { pts: pts, gd: gd, gf: gf, tb: rnd() };
     });
-    var myGd = me.gf - me.ga;
-    var rank = 1 + field.filter(function (t) { return t.pts > me.pts || (t.pts === me.pts && t.gd > myGd); }).length;
+    var myGd = me.gf - me.ga, myTb = rnd();
+    // Tabellenregeln: Punkte, Tordifferenz, Tore, dann Los (für alle gleich)
+    var rank = 1 + field.filter(function (t) {
+      return t.pts > me.pts || (t.pts === me.pts && (t.gd > myGd || (t.gd === myGd && (t.gf > me.gf || (t.gf === me.gf && t.tb > myTb)))));
+    }).length;
     S.cl.rank = rank;
     if (rank <= 8) addClTie("r16", true);
     else if (rank <= 24) addClTie("playoff", rank <= 16);
@@ -2586,38 +3482,44 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
     return "<em>Fenerbahçe</em> – " + esc(f.opp);
   }
 
-  // ---------- Prognose fürs nächste Spiel (1000 Simulationen) ----------
-  function predict(fx) {
-    var k = fx.id + "|" + fbSeasonStrength(fx) + "|" + prefs.tactic + "|" + JSON.stringify(lineupFor(fx).missing);
-    if (predCache[k]) return predCache[k];
-    var N = 1000, w = 0, d = 0, l = 0, adv = 0, scores = {};
-    for (var i = 0; i < N; i++) {
-      var cfg = fixtureCfg(fx, true); cfg.dry = true;
-      var o = simulateSilently(cfg);
-      if (o.fg > o.og) w++; else if (o.fg === o.og) d++; else l++;
-      var key = fx.v === "A" ? o.og + ":" + o.fg : o.fg + ":" + o.og;
-      scores[key] = (scores[key] || 0) + 1;
-      if (fx.ko) {
-        var fbT = o.fg + (cfg.agg ? cfg.agg[0] : 0), opT = o.og + (cfg.agg ? cfg.agg[1] : 0);
-        if (fbT > opT || (fbT === opT && o.pens && o.pens.fb > o.pens.op)) adv++;
-      }
+  // ---------- Prognose fürs nächste Spiel ----------
+  // Analytisch aus dem gemeinsamen Erwartungsmodell (Dixon-Coles), dieselbe Formel, auf die die
+  // Engine kalibriert ist. Kein Zufallsrauschen, sofort berechnet.
+  function koAdvance(m, lf, lo, agg) {
+    var et = dcMatrix(lf * 0.3, lo * 0.3, 0), w = 0, d = 0, i, j;
+    for (i = 0; i < et.length; i++) for (j = 0; j < et.length; j++) { if (i > j) w += et[i][j]; else if (i === j) d += et[i][j]; }
+    var pSO = 0.5 + Math.max(-0.05, Math.min(0.05, (lf - lo) * 0.03)), pTie = w + d * pSO, adv = 0;
+    for (i = 0; i < m.length; i++) for (j = 0; j < m.length; j++) {
+      var a = i + (agg ? agg[0] : 0), b = j + (agg ? agg[1] : 0);
+      adv += m[i][j] * (a > b ? 1 : a === b ? pTie : 0);
     }
-    var best = Object.keys(scores).sort(function (a, b) { return scores[b] - scores[a]; })[0];
-    return (predCache[k] = { w: w / N, d: d / N, l: l / N, best: best, bestP: scores[best] / N, adv: fx.ko ? adv / N : null });
+    return adv;
+  }
+  function predict(fx) {
+    var lam = fixtureLambdas(fx), k = fx.id + "|" + lam[0].toFixed(4) + "|" + lam[1].toFixed(4);
+    if (predCache[k]) return predCache[k];
+    var m = dcMatrix(lam[0], lam[1]), w = 0, d = 0, l = 0, best = null, bestP = 0, i, j;
+    for (i = 0; i < m.length; i++) for (j = 0; j < m.length; j++) {
+      if (i > j) w += m[i][j]; else if (i === j) d += m[i][j]; else l += m[i][j];
+      if (m[i][j] > bestP) { bestP = m[i][j]; best = fx.v === "A" ? j + ":" + i : i + ":" + j; }
+    }
+    var agg = null; if (fx.leg === 2) { var f1 = firstLeg(fx); agg = [f1.fg, f1.og]; }
+    return (predCache[k] = { w: w, d: d, l: l, best: best, bestP: bestP, adv: fx.ko ? koAdvance(m, lam[0], lam[1], agg) : null, lf: lam[0], lo: lam[1] });
   }
 
   // ---------- Saison-Prognose (300 schnelle Durchläufe) ----------
   function fastPlay(fx) {
-    var adv = fx.v === "H" ? FB_HOME_ADV : fx.v === "A" ? -(HOME_ADV[fx.opp] || 3) : 0, tac = tactic(), fbR = fbSeasonStrength(fx);
-    var dd = (fbR - fx.r + adv) / 22.5;
-    var fg = poisson(1.35 * Math.exp(dd) * tac.fb), og = poisson(1.35 * Math.exp(-dd) * tac.op);
-    var pens = null;
+    var lam = fixtureLambdas(fx), sc = sampleMatrix(dcMatrix(lam[0], lam[1])), fg = sc[0], og = sc[1], pens = null, et = false;
     if (fx.ko) {
       var fbT = fg, opT = og;
       if (fx.leg === 2) { var f1 = firstLeg(fx); fbT += f1.fg; opT += f1.og; }
-      if (fbT === opT) { var p = penaltyShootout(fbR, fx.r); pens = { fb: p.fb, op: p.op }; }
+      if (fbT === opT) {
+        et = true;
+        var a = poisson(lam[0] * 0.3), b = poisson(lam[1] * 0.3); fg += a; og += b; fbT += a; opT += b;
+        if (fbT === opT) { var pw = 0.5 + Math.max(-0.05, Math.min(0.05, (lam[0] - lam[1]) * 0.03)); pens = rnd() < pw ? { fb: 5, op: 4 } : { fb: 4, op: 5 }; }
+      }
     }
-    applyFixtureResult(fx.id, { fg: fg, og: og, pens: pens }, null);
+    applyFixtureResult(fx.id, { fg: fg, og: og, pens: pens, et: et, lam: lam }, null);
   }
   function runOdds() {
     var base = JSON.stringify(S), N = 300;
@@ -2718,12 +3620,13 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
           var forms = lu.xi.filter(function (p) { return p.f; }).sort(function (a, b) { return b.f - a.f; });
           var hot = forms.filter(function (p) { return p.f >= 1.5; }).slice(0, 2), cold = forms.filter(function (p) { return p.f <= -1.5; }).slice(-2);
           if (hot.length || cold.length) out += '<p class="note">' + (hot.length ? "In Form: " + hot.map(function (p) { return esc(lastName(p.n)) + " ↑"; }).join(", ") : "") + (hot.length && cold.length ? " · " : "") + (cold.length ? "Formtief: " + cold.map(function (p) { return esc(lastName(p.n)) + " ↓"; }).join(", ") : "") + "</p>";
-          if (tiredness(nx)) out += '<p class="note">Englische Woche: Das letzte Spiel ist höchstens 3 Tage her, das Team ist etwas müde.</p>';
+          var frs = lu.xi.map(function (p) { return freshFor(p.n, nx.d); }), fAvg = frs.reduce(function (a, b) { return a + b; }, 0) / (frs.length || 1);
+          out += '<p class="note">Moral: ' + moraleText() + ' · Kraft der Startelf: ' + Math.round(fAvg) + ' %' + (fAvg < 96 ? ' (englische Woche)' : '') + ' · Formation ' + formationOf(lu.xi) + '</p>';
           return out;
         })() +
         '<div class="probs"><div class="probbar"><i class="w" style="width:' + pr.w * 100 + '%"></i><i class="d" style="width:' + pr.d * 100 + '%"></i><i class="l" style="width:' + pr.l * 100 + '%"></i></div>' +
         '<div class="problbl"><span>Sieg <b>' + pct(pr.w) + '</b></span><span>Remis <b>' + pct(pr.d) + '</b></span><span>Niederlage <b>' + pct(pr.l) + '</b></span></div>' +
-        '<p class="note">Wahrscheinlichstes Ergebnis ' + pr.best + " (" + pct(pr.bestP) + ")" + (pr.adv !== null ? " · Weiterkommen " + pct(pr.adv) : "") + " · aus 1000 Simulationen</p></div>" +
+        '<p class="note">Wahrscheinlichstes Ergebnis ' + pr.best + " (" + pct(pr.bestP) + ")" + (pr.adv !== null ? " · Weiterkommen " + pct(pr.adv) : "") + " · Erwartungstore " + pr.lf.toFixed(2) + " : " + pr.lo.toFixed(2) + "</p></div>" +
         '<div class="next-btns"><button class="ghost" type="button" id="sim-next">Ergebnis simulieren</button><button class="cta" type="button" id="live-next">Live spielen</button></div>';
       $("sim-rest").hidden = false;
     } else {
@@ -3050,12 +3953,13 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
     var st = f.fixture.status.short, el = f.fixture.status.elapsed || 0;
     if (["1H", "2H", "HT", "LIVE"].indexOf(st) < 0) return null;
     var fbHome = isFb(f.teams.home.name), opp = fbHome ? f.teams.away.name : f.teams.home.name;
-    var rest = st === "HT" ? 0.5 : Math.max(0.02, (90 - Math.min(el, 90)) / 90);
+    // verbleibender Anteil der Torgefahr nach dem Zeitprofil (2. Halbzeit und Nachspielzeit gefährlicher)
+    var rest = Math.max(0.02, restShare(st === "HT" ? 45 : Math.min(el, 90)));
     var fbReds = 0, opReds = 0;
     (f.events || []).forEach(function (e) { if (e.type === "Card" && /Red|Second/.test(e.detail)) { if (isFb(e.team.name)) fbReds++; else opReds++; } });
-    var d = (FB_RATING + (FORM[FB_NAME] || 0) - oppRatingApi(opp, f.league.id) + (fbHome ? FB_HOME_ADV : -(HOME_ADV[leagueNameOnly(opp)] || 3))) / 22.5;
-    var lf = 1.35 * Math.exp(d) * rest * Math.pow(0.8, fbReds) * Math.pow(1.15, opReds);
-    var lo = 1.35 * Math.exp(-d) * rest * Math.pow(0.8, opReds) * Math.pow(1.15, fbReds);
+    var lam = realLambdas(f, fbHome, opp);
+    var dm = fbReds - opReds, mF = dm > 0 ? Math.pow(XG.RED_OWN, Math.min(2, dm)) : dm < 0 ? Math.pow(XG.RED_OPP, Math.min(2, -dm)) : 1, mO = dm > 0 ? Math.pow(XG.RED_OPP, Math.min(2, dm)) : dm < 0 ? Math.pow(XG.RED_OWN, Math.min(2, -dm)) : 1;
+    var lf = lam[0] * rest * mF, lo = lam[1] * rest * mO;
     var cf = fbHome ? f.goals.home || 0 : f.goals.away || 0, co = fbHome ? f.goals.away || 0 : f.goals.home || 0;
     var w = 0, dr = 0, l = 0;
     for (var i = 0; i <= 10; i++) for (var j = 0; j <= 10; j++) {
@@ -3093,9 +3997,25 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
   RL.chanceLogs = {};
   function preChance(f) {
     var fbHome = isFb(f.teams.home.name), opp = fbHome ? f.teams.away.name : f.teams.home.name;
-    var d = (FB_RATING + (FORM[FB_NAME] || 0) - oppRatingApi(opp, f.league.id) + (fbHome ? FB_HOME_ADV : -(HOME_ADV[leagueNameOnly(opp)] || 3))) / 22.5, lf = 1.35 * Math.exp(d), lo = 1.35 * Math.exp(-d), w = 0, dr = 0;
-    for (var i = 0; i <= 10; i++) for (var j = 0; j <= 10; j++) { var p = poisP(i, lf) * poisP(j, lo); if (i > j) w += p; else if (i === j) dr += p; }
+    var lam = realLambdas(f, fbHome, opp), m = dcMatrix(lam[0], lam[1]), w = 0, dr = 0;
+    for (var i = 0; i < m.length; i++) for (var j = 0; j < m.length; j++) { if (i > j) w += m[i][j]; else if (i === j) dr += m[i][j]; }
     return { w: w, d: dr };
+  }
+  // Erwartungstore für ein echtes Spiel (aus den Vereinsstärken, gleiches Modell wie die Simulation)
+  function realLambdas(f, fbHome, opp) {
+    var euro = f.league && f.league.id !== 203 && f.league.id !== 206;
+    var fbR = FB_RATING + (FORM[FB_NAME] || 0) + (euro ? XG.EURO_TR : 0), oR = oppRatingApi(opp, f.league.id);
+    var nm = leagueNameOnly(opp), h = fbHome ? XG.HOME : (STADIUM_HOME[nm] || XG.HOME);
+    var l = fbHome ? quickLambdas(fbR, oR, h) : quickLambdas(oR, fbR, h);
+    return fbHome ? l : [l[1], l[0]];
+  }
+  // Anteil der Torgefahr, der nach Minute min noch aussteht (inkl. erwarteter Nachspielzeit)
+  function restShare(min) {
+    var left = 0, m;
+    for (m = min + 1; m <= 90; m++) left += timeW(m <= 45 ? 1 : 2, m);
+    if (min < 45) left += 3 * 1.45;
+    left += 5.8 * 1.3;
+    return left / TIME_SUM;
   }
 
   function chartHtml(f) {
@@ -3345,10 +4265,28 @@ nav.tabs button[aria-current="true"] svg { background: rgba(255,211,26,.16); }
   });
 
   // Messpunkt für Tests: viele Spiele ohne Anzeige durchrechnen (verändert nichts)
+  // Prüf-Schnittstelle für Kalibrierungstests (ohne Wirkung auf die App)
+  window.__fener = {
+    sim: function (cfg) { cfg.dry = true; return simulateSilently(cfg); },
+    xg: expectedGoals, units: teamUnits, strength: teamStrength, oppUnits: oppUnits, styleOf: styleOf, dc: dcMatrix,
+    squad: function () { return squad; }, TACTICS: TACTICS, XG: XG, setCal: function (c) { ENGINE_CAL = c; },
+    // ganze Saison mit der Engine durchspielen (nur für Tests)
+    season: function (mode) {
+      initSeason(mode || "start");
+      var nx, guard = 0, t0 = performance.now();
+      while ((nx = nextFixture()) && guard++ < 200) simulateSilently(fixtureCfg(nx));
+      var tab = sortedTable(), fb = S.table[FB_NAME], fx = S.fixtures.filter(function (f) { return f.done; });
+      return { ms: performance.now() - t0, table: tab.map(function (t) { return [t.n, t.pts, t.gd]; }), pos: fbPos(), fbGf: fx.reduce(function (a, f) { return a + f.fg; }, 0) / fx.length, fbGa: fx.reduce(function (a, f) { return a + f.og; }, 0) / fx.length,
+        n: fx.length, cl: S.cl.won ? "win" : S.cl.ko.length ? S.cl.ko[S.cl.ko.length - 1].stage + (S.cl.ko[S.cl.ko.length - 1].won ? "+" : "") : "league" + S.cl.rank, cup: S.cup.won ? "win" : S.cup.ko[S.cup.ko.length - 1].stage, morale: S.morale, bgLeft: Object.keys(S.bg).reduce(function (a, k) { return a + S.bg[k]; }, 0), played: tab.map(function (t) { return t.p; }) };
+    },
+    init: function (mode) { initSeason(mode || "current"); },
+    nextCfg: function () { var c = fixtureCfg(nextFixture(), true); return c; }, nextFx: function () { return nextFixture(); },
+    playNext: function () { var nx = nextFixture(); if (nx) simulateSilently(fixtureCfg(nx)); }, odds: function () { return runOdds(); }, predict: function () { return predict(nextFixture()); }
+  };
   window.__fenerCal = function (oppR, venue, N, fbR) {
     var acc = { n: N, w: 0, d: 0, l: 0, fg: 0, og: 0, fb: {}, op: {} };
     for (var i = 0; i < N; i++) {
-      var o = simulateSilently({ opp: { n: "Test", r: oppR, st: "" }, venue: venue, fbRating: fbR || FB_RATING, comp: "Test", ko: false, dry: true });
+      var o = simulateSilently({ opp: { n: "Test", r: oppR, st: "" }, venue: venue, fbAdj: fbR ? fbR - teamStrength() : 0, comp: "Test", ko: false, dry: true });
       acc.fg += o.fg; acc.og += o.og; if (o.fg > o.og) acc.w++; else if (o.fg === o.og) acc.d++; else acc.l++;
       ["fb", "op"].forEach(function (side) { Object.keys(o.st[side]).forEach(function (k) { acc[side][k] = (acc[side][k] || 0) + o.st[side][k]; }); });
       acc.pens = (acc.pens || 0) + o.penCount; acc.ogs = (acc.ogs || 0) + o.ogCount;

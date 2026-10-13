@@ -14,9 +14,9 @@ Eine Fußball-Simulations-App nur für Fenerbahçe-Spiele. Sie besteht aus einer
 - Verlauf mit Bilanz (wird auf dem Gerät gespeichert)
 
 ## Weitere Funktionen
-- **Prognose fürs nächste Spiel**: 1000 Simulationen ergeben die Wahrscheinlichkeiten für Sieg, Remis und Niederlage und das wahrscheinlichste Ergebnis.
+- **Prognose fürs nächste Spiel**: Sieg, Remis, Niederlage, wahrscheinlichstes Ergebnis und Erwartungstore aus dem gemeinsamen Erwartungsmodell (Dixon-Coles), dazu Moral, Kraft der Startelf und Formation.
 - **Saison-Prognose**: 300 komplette Durchläufe ergeben die Chancen auf Meisterschaft, CL-Runden und Pokal.
-- **Kader**: Spielerstärken, Teamstärke, Spieler tauschen, Ausrichtung defensiv/ausgewogen/offensiv.
+- **Kader**: Spielerwerte (Tempo, Abschluss, Passspiel, Defensive, Physis, Ausdauer, Kraft), Mannschaftsteile Angriff/Kontrolle/Abwehr/Torwart, Formation, Spieler tauschen, Ausrichtung defensiv/ausgewogen/offensiv.
 - **Konferenz**: Bei live gespielten Ligaspielen laufen die anderen Spiele des Spieltags mit.
 - **Derby-Modus** gegen Galatasaray, Beşiktaş und Trabzonspor mit eigenen Kommentaren und mehr Karten.
 - **Torjubel mit Ton**, Verletzungen, Spielerstatistik der Saison (Tore, Vorlagen, Spieler des Spiels).
@@ -26,14 +26,36 @@ Eine Fußball-Simulations-App nur für Fenerbahçe-Spiele. Sie besteht aus einer
 - **Derby-Bilanz** gegen Galatasaray, Beşiktaş und Trabzonspor über alle Saisons.
 - **Spielerform:** Gute Noten machen Spieler für die nächsten Spiele stärker, schwache schwächer (sichtbar im Kader und beim nächsten Spiel).
 
-## Simulation: so realistisch wie möglich
-- Die Engine ist auf Süper-Lig-Durchschnittswerte abgestimmt: ca. 2,8 Tore pro Spiel, 12 Schüsse und 5 Ecken pro Team, 34 % aufs Tor, 2,2 Gelbe und 0,13 Platzverweise pro Team, Heimbilanz ca. 44/26/30.
-- Formfaktor: Die Stärkewerte werden anhand der echten Tordifferenz pro Spiel nachjustiert (Gewicht wächst mit der Zahl der Spiele, höchstens ±6).
+## Simulation (Engine v2)
+Kalibriert auf die Süper Lig 2022/23–2025/26 (1.342 Spiele, football-data.co.uk) und StatsBomb-Ereignisdaten.
+
+**Teamstärke aus Spielerwerten.** Jeder Spieler hat Werte für Tempo, Abschluss, Passspiel, Defensive, Physis, Ausdauer, Laufbereitschaft, Härte, Elfmeter und (Torwart) Paraden. Daraus entstehen vier Mannschaftsteile: Angriff, Kontrolle, Abwehr und Torwart. Spieler auf fremder Position verlieren 5–30 %, müde Spieler bis zu ~12 %. Dazu kommen Teamform (echte Tordifferenz), Moral (Ergebnisse gegen die Erwartung, Derbys) und Frische (Spielminuten kosten Kraft, Ruhetage bringen sie zurück; in englischen Wochen rotiert der Trainer).
+
+**Ein Erwartungsmodell für alles.** log λ = log 1,415 + Heimvorteil (±0,117) + 1,2·tanh(Δ/36) − Torwart-Effekt, mit Δ = 0,6·(Angriff − gegn. Abwehr) + 0,4·(Kontrolle − gegn. Kontrolle). Die Sättigung (tanh) verhindert unrealistische Kantersiege. Engine, Prognose, Saison-Hochrechnung, Hintergrundspiele, Live-Siegchance und Helfer rechnen mit derselben Formel; Prognosen nutzen Dixon-Coles (ρ = −0,11).
+
+**Ereignisbasierte Engine (Minute für Minute).** Ballbesitzphasen, Chancen aus dem Spiel (Großchance, Schuss im Strafraum, Kopfball, Distanzschuss mit eigenem xG), Konter nach Ballgewinn, Ecken, Freistöße, Elfmeter (Schütze gegen Torwart), Abpraller und Eigentore. Ob ein Schuss reingeht, hängt vom Schützen und vom Torwart ab (Post-Shot-xG). Beide Mannschaften haben Spieler, Karten, Verletzungen, Kraft und Wechsel. Gegner haben ein Profil (tiefer Block, Pressing, Konter, Standards, Härte), z. B. tief stehende Süper-Lig-Teams, Ballbesitzteams wie Man City, Konterteams wie Real Madrid.
+
+**Dynamik im Spiel.** Führende verwalten (weniger Schüsse, mehr Konter), Zurückliegende drängen; beide Trainer stellen die Taktik um und wechseln nach Plan (5 Wechsel, 3 Unterbrechungen plus Halbzeit) oder bei Müdigkeit, Verletzung und Platzverweis. Taktik hat echte Vor- und Nachteile: Offensiv lohnt sich als Favorit, Defensiv als Außenseiter. Nachspielzeit ergibt sich aus Toren, Wechseln, Verletzungen und Karten. K.-o.-Spiele haben Verlängerung und ein echtes Elfmeterschießen (ABAB, Schützen nach Elfmeterwert). Jedes Spiel hat einen Startwert und lässt sich exakt wiederholen; der strukturierte Match-Log steht im Ergebnis.
+
+**Messwerte (Engine) gegen echte Daten:**
+
+| Kennzahl | Engine | Süper Lig / Literatur |
+|---|---|---|
+| Tore je Spiel, gleich starke Teams | 2,6–2,9 | 2,85 |
+| 0:0 / 1:1 | 7–8 % / 13 % | 7,2 % / 12,3 % |
+| Schüsse / aufs Tor je Spiel | 24–25 / 8,5 | 25,3 / 8,9 |
+| Gelb / Rot je Spiel | 4,5 / 0,24 | 4,55 / 0,22 |
+| Derby: Tore, Gelb, Rot | 2,35 / 6,6 / 0,6 | 2,35 / 6,2–7,0 / 0,48–0,61 |
+| Elfmeter je Spiel | 0,32–0,38 | 0,37–0,43 |
+| Anteil Tore 1. Halbzeit | 45 % | 44 % |
+| Führung 1:0 zur Pause → Sieg/Remis/Niederlage | 67/22/11 % | 66/22/12 % |
+| Führung mit 2 Toren → Sieg | 89 % | 90,5 % |
+| Torrate in Unterzahl | ×0,57 | ×0,61 |
+| Wechsel je Team / Zeitpunkte (Median) | 4,4 / 69' | 4,3 / ~74' |
+| 7+ Tore in einem Spiel (gleich stark) | 2 % | 2,6 % |
+
 - Sperren: Liga nach jeder 4. Gelben, CL und Pokal nach jeder 3., Gelb-Rot 1 Spiel, Rot 2 Spiele, jeweils im selben Wettbewerb. Verletzungen dauern 1 bis 17 Spiele. Ausfälle werden positionsgerecht von der Bank ersetzt.
-- Live-Spiele laufen komplett automatisch, der Trainer wechselt selbst.
-- Spielverlauf: Wer zurückliegt, drängt (stärker gegen Ende), wer führt, verwaltet. Ca. 45 % der Tore fallen vor der Pause, gut 20 % ab der 76. Minute. Dazu Elfmeter (ca. 0,3 pro Spiel), Eigentore, Torwart-Qualität, Nachspielzeit von 1–5 bzw. 3–8 Minuten.
-- Heimvorteil je Stadion (Kadıköy, RAMS Park, Papara Park etwas stärker), Englische Wochen machen müde.
-- Saisonwerte im Test: Meister ca. 81 Punkte aus 34 Spielen, Platz 16 ca. 29.
+- Süper-Lig-Teams treten im Europapokal 5 Stärkepunkte schwächer an (Ligaunterschied laut UEFA-Koeffizient).
 
 ## Aufs iPhone
 1. `index.html` irgendwo hosten, z. B. mit GitHub Pages (Settings → Pages → Branch wählen).
