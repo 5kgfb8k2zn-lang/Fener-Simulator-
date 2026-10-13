@@ -202,6 +202,10 @@ nav.tabs button { font-size: 11px; letter-spacing: .04em; }
 .key-row .ghost { padding: 10px 14px; }
 .steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; color: var(--fg); }
 .steps a { color: var(--yellow); }
+.rl-plan { list-style: none; margin: 0 0 6px; padding: 0; }
+.rl-plan li { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--navy-3); font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.rl-plan li span:nth-child(2) { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rl-plan li b { color: var(--yellow); }
 .quota { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
 
 /* Saison */
@@ -533,10 +537,31 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
       </section>
 
       <div class="row">
-        <button class="ghost" type="button" id="rl-refresh" style="flex:1">Live aktualisieren</button>
+        <button class="ghost" type="button" id="rl-refresh" style="flex:1">Jetzt abfragen</button>
         <button class="ghost" type="button" id="rl-sync" style="flex:1">Echten Stand laden</button>
       </div>
       <p class="quota" id="rl-quota"></p>
+
+      <section class="panel">
+        <p class="label">Datenverbrauch</p>
+        <div class="bar" style="height:8px;flex:none"><i id="use-bar"></i></div>
+        <p class="hint" style="margin-top:6px"><b id="use-txt" style="color:var(--fg)"></b></p>
+        <p class="label" style="margin-top:12px">Wie oft während eines Fener-Spiels?</p>
+        <div class="seg" id="rl-int">
+          <button type="button" data-i="spar" aria-pressed="false">Sparsam</button>
+          <button type="button" data-i="normal" aria-pressed="true">Normal</button>
+          <button type="button" data-i="oft" aria-pressed="false">Häufig</button>
+        </div>
+        <label class="toggle" for="rl-others-on" style="margin-top:10px">
+          <input type="checkbox" id="rl-others-on">
+          <span>Andere Spiele mitladen<small>Zeigt parallel laufende Süper-Lig- und CL-Spiele, kostet ca. 12 Anfragen extra pro Spiel</small></span>
+        </label>
+        <p class="hint" style="margin-top:10px" id="use-est"></p>
+        <p class="label" style="margin-top:12px">Plan für die nächsten 7 Tage</p>
+        <ul class="rl-plan" id="use-plan"></ul>
+        <p class="hint" id="use-week"></p>
+        <p class="hint" style="margin-top:6px">Abgefragt wird nur rund um Fener-Spiele: 5 Minuten vor Anpfiff bis Abpfiff, in der Halbzeit seltener. Wird das Budget knapp, fragt die App automatisch seltener. 5 Anfragen bleiben immer als Reserve.</p>
+      </section>
 
       <section class="panel">
         <div class="row"><p class="label" style="margin:0">Tippspiel</p><span class="form-val" id="tip-total">0 P</span></div>
@@ -949,7 +974,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     $("v-squad").hidden = tab !== "squad";
     $("v-history").hidden = tab !== "history";
     $("v-real").hidden = tab !== "real";
-    if (tab === "real") { renderReal(); refreshReal(false); } else clearTimeout(RL.timer);
+    if (tab === "real") { renderReal(); syncReal(false); refreshReal(false); } else clearTimeout(RL.timer);
     if (tab === "squad") renderSquad();
     if (tab === "history") renderHistory();
     if (tab === "play") refreshSetup();
@@ -2064,18 +2089,27 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
   $("mode-no").addEventListener("click", function () { pendingMode = null; renderSeason(); });
 
   // =====================================================================
-  // ECHTER LIVE-TICKER + ECHTER STAND (API-Football)
+  // ECHTER LIVE-TICKER + ECHTER STAND (API-Football) – sparsam nach Spielplan
+  // Abgefragt wird nur rund um Fener-Spiele. An allen anderen Tagen: höchstens ein Abgleich.
   // =====================================================================
   var API = "https://v3.football.api-sports.io";
   var LEAGUES = { 203: "Süper Lig", 2: "Champions League", 206: "Türkiye Kupası" };
   var PAGES_URL = "https://5kgfb8k2zn-lang.github.io/Fener-Simulator-/";
-  var RL = { key: load("fb.apikey", ""), live: [], fbFx: null, nextFx: null, lastFx: null, err: null, loading: false, polled: 0, quota: null, lastListAt: 0, lastInfoAt: 0, teamId: load("fb.apiteam", null), timer: null, updated: null, lineups: {}, syncing: false, syncMsg: "" };
+  var DAILY_LIMIT = 100, CAP = 95;            // 5 Anfragen bleiben immer als Reserve
+  var INTERVALS = { spar: 180, normal: 120, oft: 80 };
+  var STOP = ["FT", "AET", "PEN", "PST", "CANC", "ABD", "AWD", "WO"];
+  if (!prefs.rlInt) prefs.rlInt = "normal";
+  var RL = { key: load("fb.apikey", ""), others: [], fbFx: null, nextFx: null, lastFx: null, err: null, loading: false, quota: null, lastListAt: 0, teamId: load("fb.apiteam", null), timer: null, updated: null, lineups: {}, lineupTry: {}, syncing: false, syncMsg: "", usage: load("fb.apiusage", { day: "", n: 0 }), nextPollAt: null, info: "" };
+
+  function utcDay() { return new Date().toISOString().slice(0, 10); }
+  function usedToday() { if (RL.usage.day !== utcDay()) RL.usage = { day: utcDay(), n: 0 }; return RL.usage.n; }
 
   function apiGet(path) {
+    if (usedToday() >= CAP) return Promise.reject(new Error("LIMIT"));
+    RL.usage.n++; save("fb.apiusage", RL.usage);
     return fetch(API + path, { headers: { "x-apisports-key": RL.key } }).then(function (r) {
       var rem = r.headers.get("x-ratelimit-requests-remaining");
-      if (rem !== null) RL.quota = +rem;
-      RL.polled++;
+      if (rem !== null && !isNaN(+rem)) { RL.quota = +rem; RL.usage.n = Math.max(RL.usage.n, DAILY_LIMIT - RL.quota); save("fb.apiusage", RL.usage); }
       return r.json();
     }).then(function (j) {
       var e = j && j.errors;
@@ -2097,10 +2131,41 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     });
   }
 
-  // Echter Stand: alle Fener-Spiele der Saison + Süper-Lig-Tabelle (2–3 Anfragen)
+  // ---------- Spielplan-Wissen aus den echten Daten ----------
+  function kick(a) { return Date.parse(a.date); }
+  function realList() { return REAL && REAL.fixtures ? REAL.fixtures.slice().sort(function (x, y) { return kick(x) - kick(y); }) : []; }
+  // Läuft gerade ein Fener-Spiel (5 Min. vor Anpfiff bis 150 Min. danach)?
+  function windowFx() {
+    var now = Date.now();
+    return realList().filter(function (a) { return STOP.indexOf(a.st) < 0 && now >= kick(a) - 5 * 60000 && now <= kick(a) + 150 * 60000; })[0] || null;
+  }
+  function nextRealFx() { var now = Date.now(); return realList().filter(function (a) { return STOP.indexOf(a.st) < 0 && kick(a) > now - 150 * 60000; })[0] || null; }
+  function lastRealFx() { var l = realList().filter(function (a) { return FINISHED.indexOf(a.st) >= 0; }); return l[l.length - 1] || null; }
+  function fromReal(a) {
+    if (!a) return null;
+    return { fixture: { id: a.id, date: a.date, status: { short: a.st, elapsed: null } }, league: { id: a.lg, name: LEAGUES[a.lg] || "" }, teams: { home: { name: a.h }, away: { name: a.a } }, goals: { home: a.gh, away: a.ga }, score: { penalty: { home: a.ph, away: a.pa } }, events: [] };
+  }
+  function storeLive(f) {
+    if (!REAL || !f) return;
+    var a = REAL.fixtures.filter(function (x) { return x.id === f.fixture.id; })[0];
+    if (!a) return;
+    a.st = f.fixture.status.short; a.gh = f.goals.home; a.ga = f.goals.away; a.date = f.fixture.date;
+    if (f.score && f.score.penalty) { a.ph = f.score.penalty.home; a.pa = f.score.penalty.away; }
+    save("fb.real.v1", REAL);
+  }
+
+  // Abgleich nötig? Nur wenn noch nie geladen, seit dem letzten Abgleich ein Fener-Spiel zu Ende ging, oder älter als 24 Stunden
+  function needSync() {
+    if (!REAL) return true;
+    var now = Date.now();
+    if (now - REAL.at > 24 * 3600 * 1000) return true;
+    return REAL.fixtures.some(function (a) { var end = kick(a) + 120 * 60000; return end > REAL.at && end < now; });
+  }
+
+  // Echter Stand: alle Fener-Spiele der Saison + Süper-Lig-Tabelle (2 Anfragen, beim ersten Mal 3)
   function syncReal(force) {
     if (!RL.key || RL.syncing) return Promise.resolve();
-    if (!force && REAL && Date.now() - REAL.at < 6 * 3600 * 1000) return Promise.resolve();
+    if (!force && !needSync()) return Promise.resolve();
     RL.syncing = true; RL.syncMsg = "Lade echten Stand …"; if (currentTab === "real") renderReal();
     return ensureTeamId().then(function (id) {
       return Promise.all([apiGet("/fixtures?team=" + id + "&season=" + SEASON_YEAR), apiGet("/standings?league=203&season=" + SEASON_YEAR)]);
@@ -2114,63 +2179,118 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
       REAL = { at: Date.now(), fixtures: fx, table: table };
       save("fb.real.v1", REAL);
       var sims = S.fixtures.filter(function (f) { return f.done && !f.real; }).length;
-      if (!sims && S.mode !== "start") initSeason("current"); // nichts simuliert: direkt übernehmen
-      RL.syncMsg = "Echter Stand geladen: " + fx.filter(function (f) { return FINISHED.indexOf(f.st) >= 0; }).length + " gespielte Fener-Spiele, Tabelle mit " + table.length + " Teams." + (sims ? " Im Tab „Saison“ kannst du ihn übernehmen." : " Die Saison startet jetzt von dort.");
+      if (!sims && S.mode !== "start") initSeason("current");
+      RL.syncMsg = "Echter Stand geladen: " + fx.filter(function (f) { return FINISHED.indexOf(f.st) >= 0; }).length + " gespielte Fener-Spiele, Tabelle mit " + table.length + " Teams." + (sims && S.mode !== "start" ? " Im Tab „Saison“ kannst du ihn übernehmen." : "");
     }).catch(function (e) { RL.syncMsg = "Echter Stand: " + friendlyErr(e); })
-      .then(function () { RL.syncing = false; if (currentTab === "real") renderReal(); if (currentTab === "season" && !liveActive) renderSeason(); });
+      .then(function () { RL.syncing = false; if (currentTab === "real") { renderReal(); scheduleReal(); } if (currentTab === "season" && !liveActive) renderSeason(); });
   }
 
   function friendlyErr(e) {
     var m = String(e && e.message || e);
+    if (m === "LIMIT") return "Tageslimit erreicht: Heute sind schon " + usedToday() + " von " + DAILY_LIMIT + " Anfragen verbraucht (5 bleiben als Reserve). Morgen um 2 Uhr nachts (Winterzeit 1 Uhr) geht es weiter.";
     if (/Failed to fetch|NetworkError|Load failed|blocked/i.test(m)) return "Keine Verbindung zu API-Football. Diese Ansicht blockiert fremde Dienste (z. B. die Claude-Vorschau) – öffne die App über " + PAGES_URL;
     return m + (/plan|season/i.test(m) ? " Der Free-Plan erlaubt eventuell nicht die aktuelle Saison." : /key|token/i.test(m) ? " Prüfe den API-Key." : "");
   }
 
-  function refreshReal(force) {
+  function tryLineup(id, now) {
+    if (RL.lineups[id]) return null;
+    var t = RL.lineupTry[id] || { n: 0, at: 0 };
+    if (t.n >= 4 || now - t.at < 14 * 60000) return null;
+    RL.lineupTry[id] = { n: t.n + 1, at: now };
+    return apiGet("/fixtures/lineups?fixture=" + id).then(function (res) {
+      var mine = res.filter(function (x) { return isFb(x.team.name); })[0];
+      if (mine && mine.startXI && mine.startXI.length) RL.lineups[id] = mine;
+    });
+  }
+
+  // manual = Knopf "Live aktualisieren" gedrückt
+  function refreshReal(manual) {
     if (!RL.key || RL.loading) { renderReal(); return; }
-    RL.loading = true; RL.err = null; renderReal();
-    var now = Date.now();
-    var p = Promise.resolve();
-    var needList = force || !RL.live.length || now - RL.lastListAt > 10 * 60 * 1000;
-    if (needList) {
-      p = p.then(function () { return apiGet("/fixtures?live=" + Object.keys(LEAGUES).join("-")); })
-        .then(function (res) { RL.live = res; RL.lastListAt = Date.now(); });
-    }
-    p = p.then(function () {
-      var running = RL.live.filter(function (f) { return FINISHED.indexOf(f.fixture.status.short) < 0; });
-      if (!running.length) return;
-      var ids = running.slice(0, 20).map(function (f) { return f.fixture.id; }).join("-");
-      return apiGet("/fixtures?ids=" + ids).then(function (res) { RL.live = res; });
-    });
-    p = p.then(function () {
-      RL.fbFx = RL.live.filter(function (f) { return isFb(f.teams.home.name) || isFb(f.teams.away.name); })[0] || null;
-      if (RL.fbFx || (!force && RL.nextFx && Date.now() - RL.lastInfoAt < 30 * 60 * 1000)) return;
-      return ensureTeamId().then(function (id) {
-        return Promise.all([apiGet("/fixtures?team=" + id + "&next=1"), apiGet("/fixtures?team=" + id + "&last=1")]);
-      }).then(function (r) { RL.nextFx = r[0][0] || null; RL.lastFx = r[1][0] || null; RL.lastInfoAt = Date.now(); });
-    });
-    // Aufstellung: sobald das Spiel läuft oder in weniger als 75 Minuten beginnt
-    p = p.then(function () {
-      var f = RL.fbFx || RL.nextFx;
-      if (!f || RL.lineups[f.fixture.id]) return;
-      var mins = (new Date(f.fixture.date) - Date.now()) / 60000;
-      if (!RL.fbFx && mins > 75) return;
-      return apiGet("/fixtures/lineups?fixture=" + f.fixture.id).then(function (res) {
-        var mine = res.filter(function (x) { return isFb(x.team.name); })[0];
-        if (mine && mine.startXI && mine.startXI.length) RL.lineups[f.fixture.id] = mine;
+    if (!REAL) { if (!RL.syncing) syncReal(true).then(function () { if (REAL) refreshReal(false); }); return; }
+    var now = Date.now(), w = windowFx(), n = nextRealFx();
+    var jobs = [];
+    RL.info = "";
+    if (w) {
+      jobs.push(function () {
+        return apiGet("/fixtures?id=" + w.id).then(function (res) {
+          RL.fbFx = res[0] || null;
+          if (RL.fbFx) {
+            storeLive(RL.fbFx);
+            if (FINISHED.indexOf(RL.fbFx.fixture.status.short) >= 0) setTimeout(function () { syncReal(false); }, Math.max(60000, kick(w) + 121 * 60000 - Date.now()));
+          }
+        });
       });
-    });
+      jobs.push(function () { return tryLineup(w.id, now); });
+    } else {
+      RL.fbFx = null;
+      // Aufstellung kommt ca. 60 Minuten vor Anpfiff
+      if (n && now >= kick(n) - 60 * 60000) jobs.push(function () { return tryLineup(n.id, now); });
+      if (manual && !prefs.rlOthers) RL.info = "Fener spielt gerade nicht, deshalb wurde nichts abgefragt (0 Anfragen).";
+    }
+    if (prefs.rlOthers && (w || manual) && (manual || now - RL.lastListAt > 10 * 60000)) {
+      jobs.push(function () {
+        return apiGet("/fixtures?live=" + Object.keys(LEAGUES).join("-")).then(function (res) {
+          RL.others = res.filter(function (f) { return !(isFb(f.teams.home.name) || isFb(f.teams.away.name)); });
+          RL.lastListAt = Date.now();
+        });
+      });
+    }
+    if (!jobs.length) { renderReal(); scheduleReal(); return; }
+    RL.loading = true; RL.err = null; renderReal();
+    var p = Promise.resolve();
+    jobs.forEach(function (j) { p = p.then(j); });
     p.then(function () { RL.updated = new Date(); }, function (e) { RL.err = e; })
       .then(function () { RL.loading = false; renderReal(); scheduleReal(); });
   }
 
-  function scheduleReal() {
-    clearTimeout(RL.timer);
-    if (currentTab !== "real" || document.hidden || !RL.key || RL.err) return;
-    var anyLive = RL.live.some(function (f) { return ["FT", "AET", "PEN", "PST", "CANC"].indexOf(f.fixture.status.short) < 0; });
-    if (anyLive) RL.timer = setTimeout(function () { refreshReal(false); }, 90 * 1000);
+  // Wie oft während eines Spiels abgefragt wird – passt sich automatisch an das Restbudget an
+  function pollInterval(w) {
+    var base = INTERVALS[prefs.rlInt] || 120;
+    var endT = kick(w) + 125 * 60000;
+    var left = CAP - usedToday() - 3; // 3 für Abgleich + Aufstellung zurückhalten
+    var secsLeft = Math.max(300, (endT - Date.now()) / 1000);
+    var interval = base;
+    if (left <= 0) return null;
+    if (secsLeft / base > left) interval = Math.ceil(secsLeft / left);
+    var st = RL.fbFx && RL.fbFx.fixture.status.short;
+    if (st === "HT") interval = Math.max(interval, 7 * 60);
+    if (Date.now() < kick(w)) interval = Math.max(60, Math.min(interval, (kick(w) - Date.now()) / 1000 + 30));
+    return interval;
   }
-  document.addEventListener("visibilitychange", function () { if (!document.hidden && currentTab === "real") refreshReal(false); else clearTimeout(RL.timer); });
+
+  function scheduleReal() {
+    clearTimeout(RL.timer); RL.nextPollAt = null;
+    if (currentTab !== "real" || document.hidden || !RL.key || !REAL) return;
+    if (RL.err && String(RL.err.message) === "LIMIT") return;
+    var now = Date.now(), w = windowFx(), delay;
+    if (w) {
+      var st = RL.fbFx && RL.fbFx.fixture.status.short;
+      if (st && STOP.indexOf(st) >= 0) return;
+      var iv = pollInterval(w); if (!iv) return;
+      delay = iv * 1000;
+    } else {
+      var n = nextRealFx(); if (!n) return;
+      var k = kick(n), wake = k - 5 * 60000;
+      if (!RL.lineups[n.id] && (RL.lineupTry[n.id] || { n: 0 }).n < 4) {
+        var lt = (RL.lineupTry[n.id] || { at: 0 }).at;
+        var lineupAt = Math.max(k - 60 * 60000, lt + 15 * 60000);
+        if (lineupAt < wake) wake = lineupAt;
+      }
+      delay = Math.max(5000, Math.min(wake - now, 6 * 3600 * 1000));
+    }
+    RL.nextPollAt = w ? now + delay : null;
+    RL.timer = setTimeout(function () { refreshReal(false); }, delay);
+  }
+  document.addEventListener("visibilitychange", function () { if (!document.hidden && currentTab === "real") { syncReal(false); refreshReal(false); } else clearTimeout(RL.timer); });
+
+  // Geschätzter Verbrauch pro Fener-Spiel
+  function perMatchEstimate() {
+    var iv = INTERVALS[prefs.rlInt] || 120;
+    var polls = Math.ceil((125 - 15) * 60 / iv) + 2;   // Halbzeit wird fast übersprungen
+    var extra = 2 + 2;                                   // Aufstellung + Abgleich nach Abpfiff
+    var others = prefs.rlOthers ? 12 : 0;
+    return Math.min(CAP, polls + extra + others);
+  }
 
   function minuteText(f) {
     var s = f.fixture.status;
@@ -2245,7 +2365,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
   document.addEventListener("click", function (e) {
     var b = e.target.closest("[data-sync]"); if (!b) return;
     var id = +b.dataset.sync;
-    var f = [RL.fbFx, RL.lastFx].concat(RL.live).filter(function (x) { return x && x.fixture.id === id; })[0];
+    var f = [RL.fbFx, RL.lastFx].concat(RL.others).filter(function (x) { return x && x.fixture.id === id; })[0];
     if (!f) return;
     var sx = findSeasonFixture(f); if (!sx) return;
     var fbHome = isFb(f.teams.home.name);
@@ -2332,10 +2452,29 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     save("fb.tips.v1", TIPS); renderTips();
   });
 
+  function renderUsage() {
+    var used = usedToday(), est = perMatchEstimate();
+    setSeg("rl-int", "i", prefs.rlInt);
+    $("rl-others-on").checked = !!prefs.rlOthers;
+    $("use-bar").style.width = Math.min(100, used / DAILY_LIMIT * 100) + "%";
+    $("use-txt").textContent = used + " von " + DAILY_LIMIT + " heute verbraucht";
+    $("use-est").textContent = { spar: "Alle 3 Minuten. ", normal: "Alle 2 Minuten. ", oft: "Alle 80 Sekunden. " }[prefs.rlInt] + "Pro Fener-Spiel höchstens ca. " + est + " Anfragen (meist weniger). An Tagen ohne Fener-Spiel höchstens 2 (ein Abgleich, wenn du die App öffnest).";
+    // Plan für die nächsten 7 Tage aus dem Spielplan
+    var now = Date.now(), end = now + 7 * 86400000, rows = [];
+    var list = REAL ? realList().filter(function (a) { return kick(a) > now - 150 * 60000 && kick(a) < end && STOP.indexOf(a.st) < 0; }).map(function (a) { return { t: new Date(a.date), label: (isFb(a.h) ? "vs. " + a.a : "@ " + a.h), time: true }; })
+      : S.fixtures.filter(function (f) { var t = Date.parse(f.d + "T12:00:00"); return !f.real && t > now - 86400000 && t < end; }).map(function (f) { return { t: new Date(f.d + "T12:00:00"), label: (f.v === "A" ? "@ " : "vs. ") + f.opp, time: false }; });
+    list.forEach(function (x) {
+      rows.push("<li><span>" + x.t.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" }) + (x.time ? " · " + x.t.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) : "") + "</span><span>" + esc(x.label) + "</span><b>≈ " + est + "</b></li>");
+    });
+    $("use-plan").innerHTML = rows.length ? rows.join("") : '<li><span>Kein Fener-Spiel in den nächsten 7 Tagen</span><span></span><b>≈ 0–2/Tag</b></li>';
+    $("use-week").textContent = list.length ? "Diese Woche: " + list.length + (list.length === 1 ? " Spiel" : " Spiele") + ", höchstens " + est + " Anfragen an einem Tag. Das Tageslimit von 100 wird nie erreicht." : "";
+  }
+
   function renderReal() {
     var st = $("rl-status");
     $("rl-key").value = RL.key ? RL.key : "";
     renderTips();
+    renderUsage();
     if (!RL.key) {
       st.hidden = false;
       st.innerHTML = '<div class="msg"><b>So schaltest du den echten Live-Ticker frei</b><ol class="steps">' +
@@ -2349,36 +2488,51 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     var html = "";
     if (RL.err) html += '<div class="msg err"><b>Live-Daten nicht verfügbar</b>' + esc(friendlyErr(RL.err)) + "</div>";
     else if (RL.loading) html += '<div class="msg">Lade Live-Daten …</div>';
-    if (RL.syncMsg) html += '<div class="msg' + (/Verbindung|API:|Fehler/.test(RL.syncMsg) ? " err" : "") + '">' + esc(RL.syncMsg) + "</div>";
+    if (RL.syncMsg) html += '<div class="msg' + (/Verbindung|API:|Fehler|limit/i.test(RL.syncMsg) ? " err" : "") + '">' + esc(RL.syncMsg) + "</div>";
+    if (RL.info) html += '<div class="msg">' + esc(RL.info) + "</div>";
     st.innerHTML = html; st.hidden = !html;
 
+    RL.nextFx = fromReal(nextRealFx());
+    RL.lastFx = fromReal(lastRealFx());
     var fbHtml = "";
-    if (RL.fbFx) fbHtml = matchCard(RL.fbFx, "Fener live");
-    else if (!RL.err && RL.updated) {
-      fbHtml = '<div class="msg">Fenerbahçe spielt gerade nicht. Der Ticker aktualisiert sich alle 90 Sekunden, sobald ein Spiel läuft und dieser Tab offen ist.</div>';
+    if (RL.fbFx) fbHtml = matchCard(RL.fbFx, FINISHED.indexOf(RL.fbFx.fixture.status.short) >= 0 ? "Abpfiff" : "Fener live");
+    else if (REAL) {
+      var n = nextRealFx();
+      if (n) {
+        var k = new Date(n.date);
+        fbHtml += '<div class="msg">Der Ticker startet automatisch 5 Minuten vor Anpfiff (' + k.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" }) + ", " + k.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) + "), solange dieser Tab offen ist. Bis dahin wird nichts verbraucht.</div>";
+      }
       if (RL.nextFx) fbHtml += matchCard(RL.nextFx, "Nächstes Spiel");
       if (RL.lastFx) fbHtml += matchCard(RL.lastFx, "Letztes Spiel");
     }
     $("rl-fb").innerHTML = fbHtml;
     renderLineup();
 
-    var others = RL.live.filter(function (f) { return f !== RL.fbFx; });
-    $("rl-others-wrap").hidden = !others.length;
-    $("rl-others").innerHTML = others.map(function (f) {
+    $("rl-others-wrap").hidden = !RL.others.length;
+    $("rl-others").innerHTML = RL.others.map(function (f) {
       return '<li><span class="mn">' + minuteText(f) + '</span><span class="t1">' + esc(f.teams.home.name) + '</span><span class="s">' + (f.goals.home === null ? "–" : f.goals.home) + ":" + (f.goals.away === null ? "–" : f.goals.away) + '</span><span class="t2">' + esc(f.teams.away.name) + "</span></li>";
     }).join("");
 
-    $("rl-quota").textContent = (RL.updated ? "Stand " + RL.updated.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) + " · " : "") +
-      (RL.quota !== null ? "noch " + RL.quota + " Anfragen heute" : RL.polled ? RL.polled + " Anfragen in dieser Sitzung" : "") +
-      (REAL ? " · echter Stand vom " + new Date(REAL.at).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "");
+    var nextTxt = "", nf = !RL.fbFx || STOP.indexOf(RL.fbFx.fixture.status.short) >= 0 ? nextRealFx() : null;
+    if (!RL.nextPollAt && nf && !windowFx()) nextTxt = "Ticker startet " + new Date(kick(nf) - 5 * 60000).toLocaleString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+    if (RL.nextPollAt) {
+      var secs = Math.round((RL.nextPollAt - Date.now()) / 1000);
+      nextTxt = secs < 3600 ? "nächste Abfrage in " + Math.floor(secs / 60) + ":" + String(secs % 60).padStart(2, "0") + " Min." : "nächste Abfrage " + new Date(RL.nextPollAt).toLocaleString("de-DE", { weekday: "short", hour: "2-digit", minute: "2-digit" });
+    }
+    $("rl-quota").textContent = [RL.updated ? "Stand " + RL.updated.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) : "", nextTxt, REAL ? "echter Stand vom " + new Date(REAL.at).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : ""].filter(Boolean).join(" · ");
   }
 
   $("rl-save").addEventListener("click", function () {
     RL.key = $("rl-key").value.trim(); save("fb.apikey", RL.key);
-    RL.err = null; RL.live = []; refreshReal(true); syncReal(true);
+    RL.err = null; RL.others = []; syncReal(true).then(function () { refreshReal(false); });
   });
   $("rl-refresh").addEventListener("click", function () { RL.err = null; refreshReal(true); });
   $("rl-sync").addEventListener("click", function () { syncReal(true); });
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest("#rl-int button"); if (!b) return;
+    prefs.rlInt = b.dataset.i; savePrefs(); renderUsage(); scheduleReal(); renderReal();
+  });
+  $("rl-others-on").addEventListener("change", function () { prefs.rlOthers = this.checked; savePrefs(); if (!prefs.rlOthers) RL.others = []; renderReal(); });
 
   // =====================================================================
   // Start
@@ -2389,7 +2543,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
   renderSoundBtn();
   refreshSetup();
   showTab("season");
-  // Echten Stand höchstens alle 6 Stunden automatisch laden (2–3 Anfragen)
+  // Echten Stand nur laden, wenn nötig (nach einem Fener-Spiel oder 1× pro Tag)
   if (RL.key) syncReal(false);
 })();
 </script>
