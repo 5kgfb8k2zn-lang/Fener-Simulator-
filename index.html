@@ -1,0 +1,888 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Fener Sim">
+<meta name="theme-color" content="#0b1838">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: 0; }
+body { margin: 0; }
+[hidden] { display: none !important; }
+img { max-width: 100%; }
+</style>
+</head>
+<body>
+<title>Fener Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@600;800&family=Figtree:wght@400;600;700&display=swap">
+<style>
+/* Layout: eine Bildschirm-App wie eine Stadion-Anzeigetafel – Tafel oben, Inhalt scrollt, Tab-Leiste unten. Bewusst nur dunkel (Flutlicht-Nacht in Kadıköy). */
+:root {
+  --navy: #0b1838;
+  --navy-2: #12224a;
+  --navy-3: #1b2f60;
+  --line: #2a3f74;
+  --yellow: #ffd31a;
+  --yellow-soft: #ffe57a;
+  --fg: #eef1fa;
+  --muted: #9aa7c7;
+  --win: #3ddc84;
+  --draw: #c9d1e6;
+  --loss: #ff6b6b;
+  --card-y: #ffd31a;
+  --card-r: #ff4d4d;
+  --opp: #8fb3ff;
+  --font-display: "Saira Condensed", "Arial Narrow", "Helvetica Neue", sans-serif;
+  --font-body: "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+  background: var(--navy);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.45;
+  overscroll-behavior: none;
+}
+button { font: inherit; color: inherit; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--yellow); outline-offset: 2px; }
+.app { display: flex; flex-direction: column; height: 100%; max-width: 560px; margin: 0 auto; }
+main { flex: 1; overflow-y: auto; padding: 16px 16px 24px; -webkit-overflow-scrolling: touch; }
+.view { display: flex; flex-direction: column; gap: 18px; }
+
+/* Kopf */
+.brand { display: flex; align-items: center; gap: 12px; }
+.crest { width: 40px; height: 40px; flex: none; }
+.brand h1 { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 26px; letter-spacing: .02em; line-height: 1; text-transform: uppercase; }
+.brand h1 span { color: var(--yellow); }
+.brand p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+
+.label { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+section { display: flex; flex-direction: column; }
+
+/* Segment-Schalter */
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--navy-2); border: 1px solid var(--line); border-radius: 12px; padding: 4px; gap: 4px; }
+.seg button { background: none; border: 0; border-radius: 9px; padding: 10px 6px; font-weight: 600; font-size: 14px; color: var(--muted); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--yellow); color: var(--navy); }
+
+/* Gegner */
+.opps { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.opp { display: flex; justify-content: space-between; align-items: center; gap: 8px; text-align: left; background: var(--navy-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; cursor: pointer; min-width: 0; }
+.opp b { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.opp small { font-family: var(--font-display); font-size: 15px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.opp[aria-pressed="true"] { border-color: var(--yellow); background: var(--navy-3); }
+.opp[aria-pressed="true"] small { color: var(--yellow); }
+.opp.rival b::after { content: " · Derbi"; color: var(--yellow); font-weight: 700; font-size: 11px; letter-spacing: .04em; }
+
+.row { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+.toggle { display: flex; align-items: center; gap: 10px; background: var(--navy-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; cursor: pointer; }
+.toggle input { width: 20px; height: 20px; accent-color: var(--yellow); }
+.toggle span { flex: 1; }
+.toggle small { display: block; color: var(--muted); font-size: 12.5px; }
+
+input[type=range] { width: 100%; accent-color: var(--yellow); }
+.form-val { font-family: var(--font-display); font-size: 18px; color: var(--yellow); font-variant-numeric: tabular-nums; }
+
+.cta { background: var(--yellow); color: var(--navy); border: 0; border-radius: 14px; padding: 16px; font-family: var(--font-display); font-weight: 800; font-size: 24px; letter-spacing: .06em; text-transform: uppercase; cursor: pointer; }
+.cta:active { transform: scale(.98); }
+.ghost { background: var(--navy-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px; font-weight: 600; cursor: pointer; }
+
+/* Anzeigetafel */
+.board { background: #050c20; border: 1px solid var(--line); border-radius: 16px; padding: 14px 14px 12px; display: flex; flex-direction: column; gap: 10px; }
+.board-meta { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; }
+.score { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; }
+.team { font-family: var(--font-display); font-weight: 800; font-size: 20px; text-transform: uppercase; line-height: 1.05; min-width: 0; overflow-wrap: anywhere; }
+.team.away { text-align: right; }
+.team.fb { color: var(--yellow); }
+.digits { font-family: var(--font-display); font-weight: 800; font-size: 56px; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.digits .sep { color: var(--muted); padding: 0 4px; }
+.digits .flash { animation: flash 1.2s ease-out; }
+@keyframes flash { 0% { color: var(--yellow); text-shadow: 0 0 24px var(--yellow); } 100% { text-shadow: none; } }
+.clock { display: flex; align-items: center; gap: 10px; }
+.clock .min { font-family: var(--font-display); font-weight: 800; font-size: 22px; color: var(--yellow); font-variant-numeric: tabular-nums; min-width: 4.2ch; }
+.bar { flex: 1; height: 6px; background: var(--navy-3); border-radius: 3px; overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--yellow); transition: width .3s linear; }
+.pens { text-align: center; font-family: var(--font-display); font-size: 18px; color: var(--yellow-soft); }
+
+.controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+
+/* Momentum */
+.momentum { display: flex; flex-direction: column; gap: 6px; }
+.mom-track { position: relative; height: 10px; border-radius: 5px; background: var(--navy-3); overflow: hidden; }
+.mom-track i { position: absolute; top: 0; bottom: 0; left: 50%; width: 0; transition: all .4s ease; }
+.mom-track::after { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 2px; background: var(--muted); }
+.mom-legend { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+
+/* Ticker */
+.ticker { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.ticker li { display: grid; grid-template-columns: 3.4ch 22px 1fr; gap: 8px; align-items: start; padding: 9px 0; border-bottom: 1px solid var(--navy-3); animation: in .3s ease; }
+.ticker li:last-child { border-bottom: 0; }
+.ticker .m { font-family: var(--font-display); font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; font-size: 16px; text-align: right; }
+.ticker .ic { display: flex; justify-content: center; padding-top: 3px; }
+.ticker .tx { min-width: 0; }
+.ticker li.goal-fb { background: linear-gradient(90deg, rgba(255,211,26,.14), transparent); margin: 0 -8px; padding-left: 8px; padding-right: 8px; border-radius: 8px; }
+.ticker li.goal-fb .tx b { color: var(--yellow); }
+.ticker li.goal-op .tx b { color: var(--opp); }
+.ticker li.big .tx { font-weight: 600; }
+@keyframes in { from { opacity: .2; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.ball { width: 14px; height: 14px; border-radius: 50%; background: var(--fg); box-shadow: inset -3px -3px 0 rgba(0,0,0,.25); }
+.yc, .rc { width: 10px; height: 14px; border-radius: 2px; }
+.yc { background: var(--card-y); } .rc { background: var(--card-r); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); margin-top: 3px; }
+.whistle { width: 14px; height: 14px; border: 2px solid var(--yellow); border-radius: 50%; }
+.sub { font-weight: 800; font-size: 13px; color: var(--win); line-height: 1; }
+
+/* Statistik */
+.stats { display: flex; flex-direction: column; gap: 10px; }
+.stat { display: grid; grid-template-columns: 3ch 1fr 3ch; gap: 10px; align-items: center; font-variant-numeric: tabular-nums; }
+.stat .v { font-family: var(--font-display); font-weight: 600; font-size: 17px; }
+.stat .v:last-child { text-align: right; }
+.stat .mid { display: flex; flex-direction: column; gap: 4px; }
+.stat .name { text-align: center; font-size: 12.5px; color: var(--muted); }
+.stat .split { display: flex; height: 5px; gap: 3px; }
+.stat .split i { border-radius: 3px; }
+.stat .split i:first-child { background: var(--yellow); }
+.stat .split i:last-child { background: var(--opp); }
+
+.panel { background: var(--navy-2); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+
+/* Ergebnis */
+.result { text-align: center; display: flex; flex-direction: column; gap: 6px; }
+.result .verdict { font-family: var(--font-display); font-weight: 800; font-size: 30px; text-transform: uppercase; letter-spacing: .04em; }
+.verdict.w { color: var(--win); } .verdict.d { color: var(--draw); } .verdict.l { color: var(--loss); }
+.result p { margin: 0; color: var(--muted); }
+.motm { color: var(--yellow-soft); font-weight: 600; }
+.btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+
+/* Kader */
+.squad { display: flex; flex-direction: column; gap: 6px; }
+.pl { display: grid; grid-template-columns: 2.6ch 3.4ch 1fr; gap: 10px; align-items: center; }
+.pl .no { font-family: var(--font-display); font-weight: 800; font-size: 18px; color: var(--yellow); text-align: right; font-variant-numeric: tabular-nums; }
+.pl .pos { font-size: 11px; font-weight: 700; letter-spacing: .06em; color: var(--muted); }
+.pl input { width: 100%; min-width: 0; background: var(--navy-2); border: 1px solid var(--line); border-radius: 9px; padding: 9px 10px; color: var(--fg); font: inherit; font-size: 16px; }
+.hint { color: var(--muted); font-size: 13px; margin: 0; }
+
+/* Verlauf */
+.record { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.record div { background: var(--navy-2); border: 1px solid var(--line); border-radius: 12px; padding: 10px 6px; text-align: center; }
+.record b { display: block; font-family: var(--font-display); font-size: 28px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.record small { color: var(--muted); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; font-weight: 700; }
+.record .w b { color: var(--win); } .record .l b { color: var(--loss); }
+.hist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.hist li { display: grid; grid-template-columns: 26px 1fr auto; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--navy-3); }
+.hist .pill { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; font-weight: 800; font-size: 13px; color: var(--navy); }
+.pill.w { background: var(--win); } .pill.d { background: var(--draw); } .pill.l { background: var(--loss); }
+.hist .who { min-width: 0; }
+.hist .who b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hist .who small { color: var(--muted); font-size: 12.5px; }
+.hist .sc { font-family: var(--font-display); font-weight: 800; font-size: 22px; font-variant-numeric: tabular-nums; }
+.empty { color: var(--muted); text-align: center; padding: 24px 0; }
+
+/* Tab-Leiste */
+nav.tabs { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); background: #08132e; padding-bottom: env(safe-area-inset-bottom, 0px); }
+nav.tabs button { background: none; border: 0; padding: 10px 0 12px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
+nav.tabs button svg { width: 22px; height: 22px; }
+nav.tabs button[aria-current="true"] { color: var(--yellow); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+
+<div class="app">
+  <main id="main">
+
+    <!-- SETUP -->
+    <div class="view" id="v-setup">
+      <header class="brand">
+        <svg class="crest" viewBox="0 0 40 40" aria-hidden="true">
+          <circle cx="20" cy="20" r="19" fill="#ffd31a"/>
+          <circle cx="20" cy="20" r="15.5" fill="#0b1838"/>
+          <path d="M20 4.5 A15.5 15.5 0 0 1 20 35.5 Z" fill="#ffd31a" opacity=".9"/>
+          <path d="M14 13h9v3h-6v3h5v3h-5v6h-3z" fill="#fff"/>
+        </svg>
+        <div>
+          <h1>Fener <span>Simulator</span></h1>
+          <p>Fenerbahçe-Spiele live simulieren</p>
+        </div>
+      </header>
+
+      <section>
+        <p class="label">Spielort</p>
+        <div class="seg" id="venue">
+          <button type="button" data-v="home" aria-pressed="true">Heim · Kadıköy</button>
+          <button type="button" data-v="away" aria-pressed="false">Auswärts</button>
+          <button type="button" data-v="neutral" aria-pressed="false">Neutral</button>
+        </div>
+      </section>
+
+      <section>
+        <p class="label">Gegner · Süper Lig</p>
+        <div class="opps" id="opps-league"></div>
+      </section>
+
+      <section>
+        <p class="label">Gegner · Europa</p>
+        <div class="opps" id="opps-europe"></div>
+      </section>
+
+      <section>
+        <div class="row"><p class="label">Form von Fenerbahçe</p><span class="form-val" id="form-val">82</span></div>
+        <input type="range" id="form" min="70" max="94" value="82" aria-label="Stärke von Fenerbahçe">
+      </section>
+
+      <section>
+        <label class="toggle" for="ko">
+          <input type="checkbox" id="ko">
+          <span>K.-o.-Spiel<small>Bei Unentschieden folgt ein Elfmeterschießen</small></span>
+        </label>
+      </section>
+
+      <section>
+        <p class="label">Tempo</p>
+        <div class="seg" id="speed">
+          <button type="button" data-s="700" aria-pressed="false">Gemütlich</button>
+          <button type="button" data-s="250" aria-pressed="true">Schnell</button>
+          <button type="button" data-s="0" aria-pressed="false">Sofort</button>
+        </div>
+      </section>
+
+      <button class="cta" id="kickoff" type="button">Anpfiff</button>
+    </div>
+
+    <!-- LIVE -->
+    <div class="view" id="v-live" hidden>
+      <div class="board">
+        <div class="board-meta"><span id="comp">Süper Lig</span><span id="stadium"></span></div>
+        <div class="score">
+          <div class="team" id="t-home"></div>
+          <div class="digits"><span id="g-home">0</span><span class="sep">:</span><span id="g-away">0</span></div>
+          <div class="team away" id="t-away"></div>
+        </div>
+        <div class="pens" id="pens" hidden></div>
+        <div class="clock"><span class="min" id="minute">0'</span><div class="bar"><i id="bar"></i></div></div>
+      </div>
+
+      <div class="controls" id="live-controls">
+        <button class="ghost" type="button" id="pause">Pause</button>
+        <button class="ghost" type="button" id="faster">Tempo ×2</button>
+        <button class="ghost" type="button" id="skip">Zum Ende</button>
+      </div>
+
+      <div class="panel result" id="result" hidden>
+        <div class="verdict" id="verdict"></div>
+        <p id="scorers"></p>
+        <p class="motm" id="motm"></p>
+        <div class="btn-row">
+          <button class="ghost" type="button" id="again">Rückspiel</button>
+          <button class="cta" type="button" id="new" style="font-size:18px;padding:12px">Neues Spiel</button>
+        </div>
+      </div>
+
+      <div class="momentum panel">
+        <p class="label" style="margin:0">Momentum</p>
+        <div class="mom-track"><i id="mom"></i></div>
+        <div class="mom-legend"><span id="mom-l"></span><span id="mom-r"></span></div>
+      </div>
+
+      <section class="panel">
+        <p class="label">Liveticker</p>
+        <ul class="ticker" id="ticker"></ul>
+      </section>
+
+      <section class="panel">
+        <p class="label">Statistik</p>
+        <div class="stats" id="stats"></div>
+      </section>
+    </div>
+
+    <!-- KADER -->
+    <div class="view" id="v-squad" hidden>
+      <header>
+        <p class="label">Startelf · 4-2-3-1</p>
+        <p class="hint">Namen antippen und ändern. Wer im Spiel trifft, kommt aus dieser Liste. Stürmer und offensive Mittelfeldspieler treffen am häufigsten.</p>
+      </header>
+      <div class="squad" id="xi"></div>
+      <p class="label" style="margin-top:6px">Bank</p>
+      <div class="squad" id="bench"></div>
+      <button class="ghost" type="button" id="reset-squad">Standardkader wiederherstellen</button>
+    </div>
+
+    <!-- VERLAUF -->
+    <div class="view" id="v-history" hidden>
+      <div class="record" id="record"></div>
+      <section class="panel">
+        <p class="label">Letzte Spiele</p>
+        <ul class="hist" id="hist"></ul>
+      </section>
+      <button class="ghost" type="button" id="clear-hist">Verlauf löschen</button>
+    </div>
+  </main>
+
+  <nav class="tabs" aria-label="Bereiche">
+    <button type="button" data-tab="play" aria-current="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7l4 3-1.5 4.5h-5L8 10z"/></svg>Spiel
+    </button>
+    <button type="button" data-tab="squad" aria-current="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3l-5 3 2 4 2-1v12h10V9l2 1 2-4-5-3c0 2-2 3-4 3S8 5 8 3z"/></svg>Kader
+    </button>
+    <button type="button" data-tab="history" aria-current="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>Verlauf
+    </button>
+  </nav>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- Daten ----------
+  var LEAGUE = [
+    { n: "Galatasaray", r: 84, rival: true, st: "RAMS Park" },
+    { n: "Beşiktaş", r: 80, rival: true, st: "Tüpraş Stadyumu" },
+    { n: "Trabzonspor", r: 78, rival: true, st: "Papara Park" },
+    { n: "Başakşehir", r: 75, st: "Başakşehir Fatih Terim" },
+    { n: "Samsunspor", r: 74, st: "Samsun 19 Mayıs" },
+    { n: "Göztepe", r: 73, st: "Gürsel Aksel" },
+    { n: "Kasımpaşa", r: 71, st: "Recep Tayyip Erdoğan Stadı" },
+    { n: "Alanyaspor", r: 71, st: "Alanya Oba" },
+    { n: "Antalyaspor", r: 70, st: "Corendon Airlines Park" },
+    { n: "Konyaspor", r: 70, st: "Konya Büyükşehir" },
+    { n: "Rizespor", r: 70, st: "Çaykur Didi" },
+    { n: "Gaziantep FK", r: 69, st: "Gaziantep Stadyumu" },
+    { n: "Kocaelispor", r: 68, st: "Kocaeli Stadyumu" },
+    { n: "Eyüpspor", r: 68, st: "Recep Tayyip Erdoğan Stadı" },
+    { n: "Kayserispor", r: 68, st: "RHG Enertürk Enerji" },
+    { n: "Gençlerbirliği", r: 67, st: "Eryaman Stadyumu" },
+    { n: "Karagümrük", r: 67, st: "Atatürk Olimpiyat" }
+  ];
+  var EUROPE = [
+    { n: "Real Madrid", r: 91, st: "Santiago Bernabéu" },
+    { n: "Man City", r: 90, st: "Etihad Stadium" },
+    { n: "Bayern", r: 90, st: "Allianz Arena" },
+    { n: "Barcelona", r: 89, st: "Spotify Camp Nou" },
+    { n: "Liverpool", r: 89, st: "Anfield" },
+    { n: "Inter", r: 87, st: "San Siro" },
+    { n: "Dortmund", r: 84, st: "Signal Iduna Park" },
+    { n: "Benfica", r: 82, st: "Estádio da Luz" },
+    { n: "Porto", r: 81, st: "Estádio do Dragão" },
+    { n: "Feyenoord", r: 79, st: "De Kuip" },
+    { n: "Ajax", r: 78, st: "Johan Cruijff ArenA" },
+    { n: "Olympiakos", r: 77, st: "Karaiskakis" }
+  ];
+  // Standardkader (Stand der Erstellung – im Tab "Kader" anpassbar)
+  var DEFAULT_SQUAD = {
+    xi: [
+      { no: 31, pos: "TW", n: "Ederson" },
+      { no: 27, pos: "RV", n: "Nélson Semedo" },
+      { no: 37, pos: "IV", n: "Milan Škriniar" },
+      { no: 4,  pos: "IV", n: "Çağlar Söyüncü" },
+      { no: 3,  pos: "LV", n: "Archie Brown" },
+      { no: 11, pos: "ZDM", n: "Edson Álvarez" },
+      { no: 35, pos: "ZDM", n: "Fred" },
+      { no: 21, pos: "RA", n: "Marco Asensio" },
+      { no: 94, pos: "ZOM", n: "Anderson Talisca" },
+      { no: 7,  pos: "LA", n: "Kerem Aktürkoğlu" },
+      { no: 19, pos: "ST", n: "Youssef En-Nesyri" }
+    ],
+    bench: [
+      { no: 1,  pos: "TW", n: "Tarık Çetin" },
+      { no: 16, pos: "RV", n: "Mert Müldür" },
+      { no: 24, pos: "IV", n: "Jayden Oosterwolde" },
+      { no: 5,  pos: "ZM", n: "İsmail Yüksek" },
+      { no: 17, pos: "ZOM", n: "İrfan Can Kahveci" },
+      { no: 70, pos: "RA", n: "Oğuz Aydın" },
+      { no: 45, pos: "LA", n: "Dorgeles Nene" },
+      { no: 9,  pos: "ST", n: "Jhon Durán" }
+    ]
+  };
+  var POS_WEIGHT = { TW: 0, RV: 0.35, LV: 0.35, IV: 0.3, ZDM: 0.6, ZM: 0.9, RA: 2.1, LA: 2.1, ZOM: 2.2, ST: 3.6 };
+  var ASSIST_WEIGHT = { TW: 0.05, RV: 1, LV: 1, IV: 0.3, ZDM: 0.8, ZM: 1.3, RA: 2, LA: 2, ZOM: 2.6, ST: 1.2 };
+
+  // ---------- Speicher (optional) ----------
+  function load(key, fallback) {
+    try { var v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; }
+  }
+  function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {} }
+
+  var squad = load("fb.squad", null) || JSON.parse(JSON.stringify(DEFAULT_SQUAD));
+  var history = load("fb.history", []);
+  var prefs = load("fb.prefs", { venue: "home", opp: "Galatasaray", form: 82, ko: false, speed: 250 });
+
+  // ---------- Hilfen ----------
+  var $ = function (id) { return document.getElementById(id); };
+  function rnd() { return Math.random(); }
+  function pick(arr) { return arr[Math.floor(rnd() * arr.length)]; }
+  function weighted(list, wf) {
+    var total = 0, i;
+    for (i = 0; i < list.length; i++) total += wf(list[i]);
+    var x = rnd() * total;
+    for (i = 0; i < list.length; i++) { x -= wf(list[i]); if (x <= 0) return list[i]; }
+    return list[list.length - 1];
+  }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function lastName(n) { var p = n.trim().split(/\s+/); return p.length > 1 ? p.slice(1).join(" ") : p[0]; }
+  function findOpp(name) {
+    var all = LEAGUE.concat(EUROPE);
+    for (var i = 0; i < all.length; i++) if (all[i].n === name) return all[i];
+    return LEAGUE[0];
+  }
+
+  // ---------- Setup-UI ----------
+  function renderOpps(el, list) {
+    el.innerHTML = list.map(function (o) {
+      return '<button type="button" class="opp' + (o.rival ? " rival" : "") + '" data-opp="' + esc(o.n) + '" aria-pressed="' + (prefs.opp === o.n) + '"><b>' + esc(o.n) + "</b><small>" + o.r + "</small></button>";
+    }).join("");
+  }
+  function refreshSetup() {
+    renderOpps($("opps-league"), LEAGUE);
+    renderOpps($("opps-europe"), EUROPE);
+    setSeg("venue", "v", prefs.venue);
+    setSeg("speed", "s", String(prefs.speed));
+    $("form").value = prefs.form; $("form-val").textContent = prefs.form;
+    $("ko").checked = !!prefs.ko;
+  }
+  function setSeg(id, attr, val) {
+    var bs = $(id).querySelectorAll("button");
+    for (var i = 0; i < bs.length; i++) bs[i].setAttribute("aria-pressed", bs[i].dataset[attr] === val ? "true" : "false");
+  }
+  document.addEventListener("click", function (e) {
+    var o = e.target.closest(".opp");
+    if (o) { prefs.opp = o.dataset.opp; save("fb.prefs", prefs); refreshSetup(); return; }
+    var v = e.target.closest("#venue button");
+    if (v) { prefs.venue = v.dataset.v; save("fb.prefs", prefs); setSeg("venue", "v", prefs.venue); return; }
+    var s = e.target.closest("#speed button");
+    if (s) { prefs.speed = +s.dataset.s; save("fb.prefs", prefs); setSeg("speed", "s", String(prefs.speed)); return; }
+    var t = e.target.closest("nav.tabs button");
+    if (t) showTab(t.dataset.tab);
+  });
+  $("form").addEventListener("input", function () { prefs.form = +this.value; $("form-val").textContent = prefs.form; save("fb.prefs", prefs); });
+  $("ko").addEventListener("change", function () { prefs.ko = this.checked; save("fb.prefs", prefs); });
+
+  // ---------- Tabs ----------
+  var liveActive = false;
+  function showTab(tab) {
+    var bs = document.querySelectorAll("nav.tabs button");
+    for (var i = 0; i < bs.length; i++) bs[i].setAttribute("aria-current", bs[i].dataset.tab === tab ? "true" : "false");
+    $("v-setup").hidden = !(tab === "play" && !liveActive);
+    $("v-live").hidden = !(tab === "play" && liveActive);
+    $("v-squad").hidden = tab !== "squad";
+    $("v-history").hidden = tab !== "history";
+    if (tab === "squad") renderSquad();
+    if (tab === "history") renderHistory();
+    $("main").scrollTop = 0;
+  }
+
+  // ---------- Kader ----------
+  function renderSquad() {
+    function rows(list, key) {
+      return list.map(function (p, i) {
+        return '<div class="pl"><span class="no">' + p.no + '</span><span class="pos">' + p.pos + '</span><input id="pl-' + key + "-" + i + '" data-k="' + key + '" data-i="' + i + '" value="' + esc(p.n) + '" aria-label="' + p.pos + " Nummer " + p.no + '" autocomplete="off" autocorrect="off" spellcheck="false"></div>';
+      }).join("");
+    }
+    $("xi").innerHTML = rows(squad.xi, "xi");
+    $("bench").innerHTML = rows(squad.bench, "bench");
+  }
+  document.addEventListener("input", function (e) {
+    var t = e.target;
+    if (t.dataset && t.dataset.k) {
+      var name = t.value.trim();
+      if (name) { squad[t.dataset.k][+t.dataset.i].n = name; save("fb.squad", squad); }
+    }
+  });
+  $("reset-squad").addEventListener("click", function () {
+    squad = JSON.parse(JSON.stringify(DEFAULT_SQUAD)); save("fb.squad", squad); renderSquad();
+  });
+
+  // ---------- Verlauf ----------
+  function renderHistory() {
+    var w = 0, d = 0, l = 0;
+    history.forEach(function (h) { if (h.res === "w") w++; else if (h.res === "d") d++; else l++; });
+    $("record").innerHTML =
+      '<div><b>' + history.length + '</b><small>Spiele</small></div>' +
+      '<div class="w"><b>' + w + '</b><small>Siege</small></div>' +
+      '<div><b>' + d + '</b><small>Remis</small></div>' +
+      '<div class="l"><b>' + l + '</b><small>Niederl.</small></div>';
+    if (!history.length) {
+      $("hist").innerHTML = '<li class="empty" style="display:block">Noch keine Spiele. Starte im Tab „Spiel“ dein erstes Match.</li>';
+      return;
+    }
+    $("hist").innerHTML = history.slice(0, 50).map(function (h) {
+      var letter = { w: "S", d: "U", l: "N" }[h.res];
+      return '<li><span class="pill ' + h.res + '">' + letter + '</span><span class="who"><b>' + esc(h.title) + '</b><small>' + esc(h.sub) + '</small></span><span class="sc">' + esc(h.score) + "</span></li>";
+    }).join("");
+  }
+  $("clear-hist").addEventListener("click", function () {
+    if (this.dataset.armed) { history = []; save("fb.history", history); renderHistory(); this.textContent = "Verlauf löschen"; delete this.dataset.armed; }
+    else { this.dataset.armed = "1"; this.textContent = "Wirklich löschen? Nochmal tippen"; var b = this; setTimeout(function () { if (b.dataset.armed) { b.textContent = "Verlauf löschen"; delete b.dataset.armed; } }, 3000); }
+  });
+
+  // ---------- Simulation ----------
+  var M = null, timer = null;
+
+  function newMatch() {
+    var opp = findOpp(prefs.opp);
+    var fbHome = prefs.venue !== "away";
+    var homeAdv = prefs.venue === "neutral" ? 0 : 3;
+    var isEurope = EUROPE.indexOf(opp) >= 0;
+    return {
+      opp: opp,
+      fbHome: fbHome,
+      neutral: prefs.venue === "neutral",
+      ko: prefs.ko,
+      comp: prefs.ko ? (isEurope ? "Europapokal · K.-o." : "Türkiye Kupası") : (isEurope ? "Europapokal" : "Süper Lig"),
+      fb: { r: prefs.form + (prefs.venue === "home" ? homeAdv : 0), g: 0, shots: 0, sot: 0, xg: 0, corners: 0, fouls: 0, y: 0, red: 0, poss: 0, scorers: [] },
+      op: { r: opp.r + (prefs.venue === "away" ? homeAdv : 0), g: 0, shots: 0, sot: 0, xg: 0, corners: 0, fouls: 0, y: 0, red: 0, poss: 0, scorers: [] },
+      onPitch: squad.xi.map(function (p) { return { no: p.no, pos: p.pos, n: p.n, rating: 6.3 + rnd() * 0.4, booked: false, off: false }; }),
+      bench: squad.bench.map(function (p) { return { no: p.no, pos: p.pos, n: p.n, rating: 6.4, booked: false, off: false }; }),
+      subs: 0,
+      minute: 0,
+      half: 1,
+      added1: 1 + Math.floor(rnd() * 4),
+      added2: 2 + Math.floor(rnd() * 5),
+      momentum: 0,
+      done: false,
+      pens: null,
+      speed: prefs.speed
+    };
+  }
+
+  function eff(side) {
+    var t = M[side];
+    return t.r - t.red * 6;
+  }
+
+  function addEvent(min, icon, html, cls) {
+    var li = document.createElement("li");
+    if (cls) li.className = cls;
+    li.innerHTML = '<span class="m">' + min + '</span><span class="ic">' + icon + '</span><span class="tx">' + html + "</span>";
+    var tk = $("ticker");
+    tk.insertBefore(li, tk.firstChild);
+  }
+  var IC = { ball: '<i class="ball"></i>', y: '<i class="yc"></i>', r: '<i class="rc"></i>', dot: '<i class="dot"></i>', wh: '<i class="whistle"></i>', sub: '<span class="sub">⇄</span>' };
+
+  function minLabel() {
+    var m = M.minute;
+    if (M.half === 1 && m > 45) return "45+" + (m - 45) + "'";
+    if (M.half === 2 && m > 90) return "90+" + (m - 90) + "'";
+    return m + "'";
+  }
+
+  function fbPlayers() { return M.onPitch.filter(function (p) { return !p.off; }); }
+
+  var FB_GOAL = [
+    "TOOOR! <b>{s}</b> trifft für Fenerbahçe!",
+    "GOOOL! <b>{s}</b> schiebt eiskalt ein!",
+    "Was für ein Treffer von <b>{s}</b>! Die Kanarienvögel jubeln!",
+    "<b>{s}</b> köpft ein! Fenerbahçe trifft!",
+    "Aus 18 Metern! <b>{s}</b> hämmert den Ball in den Winkel!"
+  ];
+  var OP_GOAL = [
+    "Tor für <b>{t}</b>. Die Nummer {no} trifft.",
+    "<b>{t}</b> schlägt zu. Die Nummer {no} vollendet einen Konter.",
+    "Gegentor. <b>{t}</b> trifft durch die Nummer {no} nach einer Ecke."
+  ];
+  var MISS_FB = ["{s} zieht ab – knapp vorbei.", "{s} schießt drüber.", "Abschluss von {s}, geblockt.", "{s} versucht es aus der Distanz, kein Problem für den Keeper."];
+  var SAVE_FB = ["Riesenchance! {s} scheitert am Torwart.", "{s} allein vor dem Tor – pariert!", "Pfosten! {s} hat Pech."];
+  var MISS_OP = ["{t} kommt zum Abschluss, vorbei.", "Schuss von {t}, geblockt von {d}.", "{t} versucht es aus der Distanz, drüber."];
+  var SAVE_OP = ["Was für eine Parade! {k} hält stark gegen {t}.", "Glanzparade von {k}!", "{t} trifft nur die Latte!"];
+
+  function fill(tpl, o) { return tpl.replace(/\{(\w+)\}/g, function (_, k) { return o[k] !== undefined ? o[k] : ""; }); }
+  function keeper() { var k = fbPlayers().filter(function (p) { return p.pos === "TW"; })[0]; return k ? lastName(k.n) : "der Keeper"; }
+  function defender() { var d = fbPlayers().filter(function (p) { return /IV|RV|LV/.test(p.pos); }); return d.length ? lastName(pick(d).n) : "der Abwehr"; }
+
+  function step() {
+    if (M.done) return;
+    M.minute++;
+    var m = M.minute;
+
+    // Anpfiff / Halbzeit / Abpfiff
+    if (M.half === 1 && m === 1) addEvent("1'", IC.wh, "Anpfiff" + (M.fbHome && !M.neutral ? " in Kadıköy. Das Stadion ist voll." : "."));
+    if (M.half === 1 && m > 45 + M.added1) {
+      addEvent("HZ", IC.wh, "Halbzeit. " + scoreLine() + ".");
+      M.half = 2; M.minute = 45; render(); return;
+    }
+    if (M.half === 2 && m > 90 + M.added2) { endMatch(); return; }
+    if (m === 46 && M.half === 2) addEvent("46'", IC.wh, "Weiter geht's, die zweite Halbzeit läuft.");
+
+    var fbE = eff("fb"), opE = eff("op");
+    var d = (fbE - opE) / 10; // ~ -1 .. +1.5
+    var pFb = Math.max(0.28, Math.min(0.72, 0.5 + d * 0.09 + M.momentum * 0.06));
+    var fbHasBall = rnd() < pFb;
+    M[fbHasBall ? "fb" : "op"].poss++;
+
+    // Momentum langsam driften lassen
+    M.momentum = Math.max(-1, Math.min(1, M.momentum * 0.9 + (fbHasBall ? 0.05 : -0.05) + (rnd() - 0.5) * 0.1));
+
+    // Spätes Drängen, wenn man zurückliegt
+    var urgency = 0;
+    if (m > 70) {
+      if (M.fb.g < M.op.g) urgency = fbHasBall ? 0.06 : 0;
+      if (M.op.g < M.fb.g) urgency = fbHasBall ? 0 : 0.06;
+    }
+
+    if (rnd() < 0.24 + urgency) shot(fbHasBall ? "fb" : "op", d);
+    else if (rnd() < 0.09) corner(fbHasBall ? "fb" : "op");
+
+    if (rnd() < 0.032) card(rnd() < 0.5 ? "fb" : "op");
+
+    // Wechsel
+    if (M.half === 2 && M.subs < 5 && (m === 61 || m === 68 || m === 76 || m === 83) && rnd() < 0.8) sub();
+
+    render();
+  }
+
+  function shot(side, d) {
+    var t = M[side];
+    t.shots++;
+    var strength = side === "fb" ? d : -d;
+    var big = rnd() < 0.13 + strength * 0.03;
+    var xg = big ? 0.28 + rnd() * 0.4 : 0.02 + rnd() * rnd() * 0.18;
+    t.xg += xg;
+    var finish = 1 + strength * 0.12;
+    var goal = rnd() < xg * finish;
+    var onTarget = goal || rnd() < (big ? 0.6 : 0.3);
+    if (onTarget) t.sot++;
+
+    if (side === "fb") {
+      var shooter = weighted(fbPlayers(), function (p) { var w = POS_WEIGHT[p.pos]; return w === undefined ? 0.5 : w; });
+      if (goal) {
+        t.g++;
+        var mates = fbPlayers().filter(function (p) { return p !== shooter && p.pos !== "TW"; });
+        var assist = rnd() < 0.75 && mates.length ? weighted(mates, function (p) { return ASSIST_WEIGHT[p.pos] || 0.5; }) : null;
+        shooter.rating += 1.1; if (assist) assist.rating += 0.6;
+        t.scorers.push(lastName(shooter.n) + " " + minLabel());
+        M.momentum = Math.min(1, M.momentum + 0.4);
+        addEvent(minLabel(), IC.ball, fill(pick(FB_GOAL), { s: esc(shooter.n) }) + (assist ? " Vorlage: " + esc(lastName(assist.n)) + "." : "") + " <b>" + scoreLine() + "</b>", "goal-fb big");
+        flash();
+      } else if (big) {
+        shooter.rating += 0.1;
+        addEvent(minLabel(), IC.dot, fill(pick(SAVE_FB), { s: esc(lastName(shooter.n)) }), "big");
+      } else if (rnd() < 0.35) {
+        addEvent(minLabel(), IC.dot, fill(pick(MISS_FB), { s: esc(lastName(shooter.n)) }));
+      }
+    } else {
+      var no = pick([7, 9, 10, 11, 8, 19, 17, 20, 23]);
+      if (goal) {
+        t.g++;
+        t.scorers.push("#" + no + " " + minLabel());
+        M.momentum = Math.max(-1, M.momentum - 0.4);
+        fbPlayers().forEach(function (p) { if (/TW|IV|RV|LV/.test(p.pos)) p.rating -= 0.3; });
+        addEvent(minLabel(), IC.ball, fill(pick(OP_GOAL), { t: esc(M.opp.n), no: no }) + " <b>" + scoreLine() + "</b>", "goal-op big");
+        flash();
+      } else if (big && onTarget) {
+        var k = fbPlayers().filter(function (p) { return p.pos === "TW"; })[0]; if (k) k.rating += 0.4;
+        addEvent(minLabel(), IC.dot, fill(pick(SAVE_OP), { t: esc(M.opp.n), k: esc(keeper()) }), "big");
+      } else if (rnd() < 0.25) {
+        addEvent(minLabel(), IC.dot, fill(pick(MISS_OP), { t: esc(M.opp.n), d: esc(defender()) }));
+      }
+    }
+  }
+
+  function corner(side) { M[side].corners++; }
+
+  function card(side) {
+    var t = M[side];
+    t.fouls++;
+    if (rnd() > 0.55) return;
+    if (side === "fb") {
+      var cands = fbPlayers().filter(function (p) { return p.pos !== "TW"; });
+      var p = weighted(cands, function (p) { return /ZDM|IV|RV|LV/.test(p.pos) ? 2 : 1; });
+      if (p.booked || rnd() < 0.03) {
+        p.off = true; t.red++; p.rating -= 1.5;
+        addEvent(minLabel(), IC.r, (p.booked ? "Gelb-Rot" : "Rot") + " für <b>" + esc(p.n) + "</b>. Fenerbahçe nur noch zu zehnt.", "big");
+      } else {
+        p.booked = true; t.y++; p.rating -= 0.2;
+        addEvent(minLabel(), IC.y, "Gelbe Karte für " + esc(lastName(p.n)) + ".");
+      }
+    } else {
+      if (rnd() < 0.04) { t.red++; addEvent(minLabel(), IC.r, "Rot für <b>" + esc(M.opp.n) + "</b>! Überzahl für Fenerbahçe.", "big"); }
+      else { t.y++; addEvent(minLabel(), IC.y, "Gelbe Karte für " + esc(M.opp.n) + " (#" + pick([4, 5, 6, 8, 14, 22, 25]) + ")."); }
+    }
+  }
+
+  function sub() {
+    var avail = M.bench.filter(function (p) { return !p.used && p.pos !== "TW"; });
+    if (!avail.length) return;
+    var losing = M.fb.g < M.op.g, winning = M.fb.g > M.op.g;
+    var on = weighted(avail, function (p) {
+      if (losing) return /ST|LA|RA|ZOM/.test(p.pos) ? 3 : 0.5;
+      if (winning) return /IV|ZM|RV|ZDM/.test(p.pos) ? 3 : 1;
+      return 1;
+    });
+    var outs = fbPlayers().filter(function (p) { return p.pos !== "TW" && !p.subbed; });
+    if (!outs.length) return;
+    var off = weighted(outs, function (p) { return (p.booked ? 2 : 1) * Math.max(0.2, 8 - p.rating); });
+    off.off = true; off.subbed = true;
+    on.used = true;
+    var newP = { no: on.no, pos: off.pos, n: on.n, rating: 6.5, booked: false, off: false, subbed: true };
+    M.onPitch.push(newP);
+    M.subs++;
+    addEvent(minLabel(), IC.sub, "Wechsel: " + esc(lastName(on.n)) + " kommt für " + esc(lastName(off.n)) + ".");
+  }
+
+  function scoreLine() {
+    var h = M.fbHome ? M.fb.g : M.op.g, a = M.fbHome ? M.op.g : M.fb.g;
+    return h + ":" + a;
+  }
+
+  function endMatch() {
+    M.done = true;
+    clearInterval(timer); timer = null;
+    M.minute = 90 + M.added2;
+    addEvent("90+" + M.added2 + "'", IC.wh, "Abpfiff. Endstand " + scoreLine() + ".");
+    if (M.ko && M.fb.g === M.op.g) penalties();
+    finish();
+  }
+
+  function penalties() {
+    var takers = fbPlayers().filter(function (p) { return p.pos !== "TW"; }).sort(function (a, b) { return (POS_WEIGHT[b.pos] || 0) - (POS_WEIGHT[a.pos] || 0); });
+    var fbP = 0, opP = 0, round = 0, log = [];
+    var fbConv = 0.76 + (eff("fb") - eff("op")) * 0.003, opConv = 0.76 - (eff("fb") - eff("op")) * 0.003;
+    while (true) {
+      round++;
+      var tk = takers[(round - 1) % takers.length];
+      var a = rnd() < fbConv, b = rnd() < opConv;
+      if (a) fbP++; if (b) opP++;
+      log.push(esc(lastName(tk.n)) + (a ? " ✓" : " ✗"));
+      if (round <= 5) {
+        var left = 5 - round;
+        if (fbP > opP + left || opP > fbP + left) break;
+      } else if (fbP !== opP) break;
+      if (round > 20) { fbP++; break; }
+    }
+    M.pens = { fb: fbP, op: opP };
+    addEvent("i.E.", IC.wh, "Elfmeterschießen: " + log.join(", ") + ". <b>" + (M.fbHome ? fbP + ":" + opP : opP + ":" + fbP) + " i.E.</b>", fbP > opP ? "goal-fb big" : "goal-op big");
+  }
+
+  function finish() {
+    render();
+    var res = M.fb.g > M.op.g ? "w" : M.fb.g < M.op.g ? "l" : "d";
+    if (M.pens) res = M.pens.fb > M.pens.op ? "w" : "l";
+    var v = $("verdict");
+    v.className = "verdict " + res;
+    var txt = { w: "Sieg für Fenerbahçe", d: "Unentschieden", l: "Niederlage" }[res];
+    if (M.pens) txt = res === "w" ? "Weiter im Elfmeterschießen" : "Raus im Elfmeterschießen";
+    if (res === "w" && M.fb.g - M.op.g >= 3) txt = "Kantersieg!";
+    v.textContent = txt;
+    $("scorers").textContent = M.fb.scorers.length ? "Tore: " + M.fb.scorers.join(", ") : "Kein Tor für Fenerbahçe";
+    var best = M.onPitch.slice().sort(function (a, b) { return b.rating - a.rating; })[0];
+    $("motm").textContent = "Spieler des Spiels: " + best.n + " (" + Math.min(10, best.rating).toFixed(1) + ")";
+    $("result").hidden = false;
+    $("live-controls").hidden = true;
+
+    var title = M.fbHome ? "Fenerbahçe – " + M.opp.n : M.opp.n + " – Fenerbahçe";
+    var d = new Date();
+    history.unshift({
+      res: res,
+      title: title,
+      sub: M.comp + " · " + d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }) + (M.fb.scorers.length ? " · " + M.fb.scorers.map(function (s) { return s.replace(/ \d.*$/, ""); }).join(", ") : ""),
+      score: scoreLine() + (M.pens ? " i.E." : "")
+    });
+    history = history.slice(0, 100);
+    save("fb.history", history);
+  }
+
+  // ---------- Rendering Live ----------
+  function flash() {
+    ["g-home", "g-away"].forEach(function (id) { var e = $(id); e.classList.remove("flash"); void e.offsetWidth; e.classList.add("flash"); });
+  }
+
+  function render() {
+    var home = M.fbHome ? M.fb : M.op, away = M.fbHome ? M.op : M.fb;
+    $("g-home").textContent = home.g; $("g-away").textContent = away.g;
+    $("minute").textContent = M.done ? "Ende" : minLabel();
+    var total = 90 + M.added1 + M.added2;
+    var elapsed = M.half === 1 ? M.minute : 45 + M.added1 + (M.minute - 45);
+    $("bar").style.width = Math.min(100, (elapsed / total) * 100) + "%";
+    if (M.pens) {
+      $("pens").hidden = false;
+      $("pens").textContent = (M.fbHome ? M.pens.fb + ":" + M.pens.op : M.pens.op + ":" + M.pens.fb) + " im Elfmeterschießen";
+    }
+
+    var mom = $("mom"), v = M.momentum;
+    mom.style.left = v >= 0 ? "50%" : (50 + v * 50) + "%";
+    mom.style.width = Math.abs(v) * 50 + "%";
+    mom.style.background = v >= 0 ? "var(--yellow)" : "var(--opp)";
+
+    var possT = M.fb.poss + M.op.poss || 1;
+    var rows = [
+      ["Ballbesitz %", Math.round(M.fb.poss / possT * 100), Math.round(M.op.poss / possT * 100)],
+      ["Schüsse", M.fb.shots, M.op.shots],
+      ["Aufs Tor", M.fb.sot, M.op.sot],
+      ["Expected Goals", M.fb.xg.toFixed(1), M.op.xg.toFixed(1)],
+      ["Ecken", M.fb.corners, M.op.corners],
+      ["Gelbe Karten", M.fb.y, M.op.y],
+      ["Platzverweise", M.fb.red, M.op.red]
+    ];
+    $("stats").innerHTML = rows.map(function (r) {
+      var a = parseFloat(r[1]), b = parseFloat(r[2]), s = a + b || 1;
+      var pa = s ? a / s * 100 : 50;
+      if (a + b === 0) pa = 50;
+      return '<div class="stat"><span class="v">' + r[1] + '</span><div class="mid"><span class="name">' + r[0] + '</span><div class="split"><i style="width:' + pa + '%"></i><i style="width:' + (100 - pa) + '%"></i></div></div><span class="v">' + r[2] + "</span></div>";
+    }).join("");
+  }
+
+  function startMatch() {
+    clearInterval(timer);
+    M = newMatch();
+    liveActive = true;
+    $("ticker").innerHTML = "";
+    $("result").hidden = true;
+    $("live-controls").hidden = false;
+    $("pens").hidden = true;
+    $("pause").textContent = "Pause";
+    var homeName = M.fbHome ? "Fenerbahçe" : M.opp.n, awayName = M.fbHome ? M.opp.n : "Fenerbahçe";
+    $("t-home").textContent = homeName; $("t-away").textContent = awayName;
+    $("t-home").className = "team" + (M.fbHome ? " fb" : "");
+    $("t-away").className = "team away" + (M.fbHome ? "" : " fb");
+    $("comp").textContent = M.comp;
+    $("stadium").textContent = M.neutral ? "Neutraler Platz" : M.fbHome ? "Ülker Stadyumu" : M.opp.st;
+    $("mom-l").textContent = "Fenerbahçe"; $("mom-r").textContent = M.opp.n;
+    showTab("play");
+    render();
+    run();
+  }
+
+  function run() {
+    clearInterval(timer);
+    if (M.speed === 0) { while (!M.done) step(); return; }
+    timer = setInterval(step, M.speed);
+  }
+
+  $("kickoff").addEventListener("click", startMatch);
+  $("pause").addEventListener("click", function () {
+    if (M.done) return;
+    if (timer) { clearInterval(timer); timer = null; this.textContent = "Weiter"; }
+    else { run(); this.textContent = "Pause"; }
+  });
+  $("faster").addEventListener("click", function () {
+    if (M.done) return;
+    M.speed = Math.max(40, Math.round((M.speed || 250) / 2));
+    if (timer) run();
+  });
+  $("skip").addEventListener("click", function () {
+    if (M.done) return;
+    clearInterval(timer); timer = null;
+    while (!M.done) step();
+  });
+  $("again").addEventListener("click", function () {
+    if (prefs.venue === "home") prefs.venue = "away"; else if (prefs.venue === "away") prefs.venue = "home";
+    save("fb.prefs", prefs); refreshSetup(); startMatch();
+  });
+  $("new").addEventListener("click", function () { liveActive = false; refreshSetup(); showTab("play"); });
+
+  refreshSetup();
+})();
+</script>
+
+</body>
+</html>
