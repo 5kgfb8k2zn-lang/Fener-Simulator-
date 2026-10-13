@@ -2633,7 +2633,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabula
     if (!RL.helper) { $("rl-helper-msg").textContent = "Trage zuerst die Adresse des Helfers ein."; return; }
     $("rl-helper-msg").textContent = "Sende Test-Nachricht …";
     helperGet("/test").then(function (r) {
-      $("rl-helper-msg").textContent = r.ok ? "Gesendet! Die Nachricht sollte gleich in der ntfy-App erscheinen." : (r.error || "Das hat nicht geklappt.");
+      $("rl-helper-msg").textContent = r.ok ? "Gesendet an Kanal „" + (r.topic || "?") + "“. Die Nachricht sollte gleich in der ntfy-App erscheinen. Kommt nichts: Steht in ntfy genau dieser Kanalname?" : (r.error || "Das hat nicht geklappt.");
     }, function (e) { $("rl-helper-msg").textContent = friendlyErr(e); });
   });
   document.addEventListener("click", function (e) {
